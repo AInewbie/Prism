@@ -463,7 +463,7 @@ h1 em {
 }
 .advanced-fields {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 210px;
+  grid-template-columns: minmax(190px, .7fr) minmax(0, 1.3fr) 210px;
   gap: 15px;
   padding: 10px 0;
 }
@@ -473,6 +473,7 @@ h1 em {
   gap: 7px;
   font-size: 11px;
 }
+.advanced-fields small { line-height: 1.45; color: #899487; }
 .provider-picker {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -498,6 +499,7 @@ h1 em {
   margin-left: auto;
   flex-shrink: 0;
 }
+.provider-chip.unsupported { opacity: .48; cursor: not-allowed; }
 .provider-chip .provider-name {
   font-size: 11px;
   font-weight: 600;

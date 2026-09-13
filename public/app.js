@@ -17,6 +17,7 @@ const S = {
   connections: {},
   selected: new Set(["openai", "gemini", "grok", "claude"]),
   mode: "demo",
+  outputMode: "text",
   run: null,
   view: "answers",
   blind: false,
@@ -42,6 +43,7 @@ const score = (r) =>
     ? Math.round((criteria.reduce((n, k) => n + r.scores[k], 0) / 3) * 10) / 10
     : null;
 const name = (r) => (S.blind ? "Answer " + r.label : p(r.provider).name);
+const models = (r) => r.imageModel && r.imageModel !== r.model ? r.model + " + " + r.imageModel : r.model;
 const busy = () =>
   S.creating || S.fileBusy || S.requests.size > 0 || S.combineBusy || S.savingReviews > 0;
 function toast(message, error = false) {
@@ -155,38 +157,41 @@ function renderProviders() {
   $("provider-picker").innerHTML = S.providers
     .map((provider) => {
       const c = S.connections[provider.id];
+      const supported = S.outputMode === "text" || ["openai", "gemini"].includes(provider.id);
       return (
-        '<label class="provider-chip"><span class="provider-icon ' +
+        '<label class="provider-chip ' + (supported ? '' : 'unsupported') + '"><span class="provider-icon ' +
         provider.id +
         '">' +
         provider.letter +
         '</span><div><span class="provider-name">' +
         esc(provider.name) +
         "</span><small>" +
-        (S.mode === "demo"
-          ? "Demo sample"
+        (!supported
+          ? "Text output only in Prism"
+          : S.mode === "demo"
+          ? (S.outputMode === 'visual' ? "Visual sample" : "Text sample")
           : c?.hasKey
-            ? esc(c.model || "Choose a model")
+            ? esc(S.outputMode === 'visual' && provider.id === 'gemini' ? c.imageModel || "Choose an image model" : c.model || "Choose a model")
             : "Connect API key") +
         '</small></div><input type="checkbox" data-provider-pick="' +
         provider.id +
         '" aria-label="Include ' +
         provider.name +
         '" ' +
-        (S.selected.has(provider.id) ? "checked" : "") +
+        (S.selected.has(provider.id) ? "checked" : "") + (supported ? '' : ' disabled') +
         "></label>"
       );
     })
     .join("");
   $("connection-count").textContent =
     Object.values(S.connections).filter((c) => c.hasKey).length + "/4";
-  $("send-caption").textContent = S.selected.size + " models selected";
+  $("send-caption").textContent = S.selected.size + " models · " + (S.outputMode === 'visual' ? 'generated image' : 'text / files');
   $("mode-note").textContent =
     S.mode === "demo"
       ? "Explore with clearly labelled sample answers. Add your API keys for real responses."
       : "Sends your prompt to " +
         S.selected.size +
-        " selected provider(s). Provider API charges apply; no automatic retries.";
+        " selected provider(s). " + (S.outputMode === 'visual' ? 'Image generation charges can apply. ' : '') + "No automatic retries.";
   $("send-button").disabled = busy() || !S.selected.size;
 }
 async function refreshHistory() {
@@ -311,7 +316,7 @@ function renderCards() {
         "</span><div><h3>" +
         esc(name(r)) +
         "</h3><small>" +
-        esc(S.blind ? "Blind review" : r.model) +
+        esc(S.blind ? "Blind review" : models(r)) +
         '</small></div><span class="score-badge" aria-label="Overall score ' +
         (grade ?? "unscored") +
         '">' +
@@ -406,7 +411,7 @@ function renderScorecard() {
           esc(name(r)) +
           "</strong><small>Answer " +
           r.label +
-          (S.blind ? "" : " · " + esc(r.model)) +
+          (S.blind ? "" : " · " + esc(models(r))) +
           "</small></td>" +
           criteria
             .map((k) => "<td>" + (r.scores[k] ?? "—") + "</td>")
@@ -550,6 +555,7 @@ function renderSession() {
       (run.mode === "demo"
         ? "DEMO SESSION · Fixed sample answers, not real outputs from these models. "
         : "LIVE SESSION · Responses are saved as they arrive. ") +
+      ((run.outputMode || "text") === "visual" ? "Requested generated image; provider text is retained when available. " : "Requested text / code / files. ") +
       (S.blind
         ? "Model identities are hidden; answer order is randomized per session."
         : "Score what matters to you. Select answers to build your combined draft.");
@@ -633,6 +639,7 @@ async function start(event) {
         prompt: $("prompt").value,
         instructions: $("instructions").value,
         maxTokens: Number($("max-tokens").value),
+        outputMode: S.outputMode,
         mode: S.mode,
         providers: [...S.selected],
       },
@@ -781,7 +788,8 @@ function renderConnections() {
         esc(c?.model || "") +
         '" placeholder="Enter an ID or load models" maxlength="120"><datalist id="models-' +
         provider.id +
-        '"></datalist></label></div>' +
+        '"></datalist></label>' +
+        (["openai", "gemini"].includes(provider.id) ? '<label>Image model ID<input id="image-model-' + provider.id + '" list="models-' + provider.id + '" value="' + esc(c?.imageModel || '') + '" placeholder="For text + generated image" maxlength="120"></label>' : '') + '</div>' +
         '<div class="connection-actions"><label class="check-label"><input id="remember-' +
         provider.id +
         '" type="checkbox" ' +
@@ -796,7 +804,8 @@ function renderConnections() {
         (c?.hasKey
           ? "Key saved" +
             (c.remembered ? " on device" : " for this server session") +
-            (c.model ? " · model configured" : " · choose a model")
+            (c.model ? " · text model configured" : " · choose a text model") +
+            (["openai", "gemini"].includes(provider.id) ? (c.imageModel ? " · image model configured" : " · image model optional") : "")
           : "Not connected") +
         "</p></form>"
       );
@@ -815,6 +824,16 @@ $("sample-prompt").onclick = () => {
 };
 $("mode").onchange = () => {
   S.mode = $("mode").value;
+  renderProviders();
+};
+$("output-mode").onchange = () => {
+  S.outputMode = $("output-mode").value;
+  if (S.outputMode === "visual") {
+    const removed = [...S.selected].filter((id) => !["openai", "gemini"].includes(id));
+    removed.forEach((id) => S.selected.delete(id));
+    if (!S.selected.size) ["openai", "gemini"].forEach((id) => S.selected.add(id));
+    if (removed.length) toast("Visual comparison uses OpenAI and Gemini; text-only providers were deselected.");
+  }
   renderProviders();
 };
 $("provider-picker").onchange = (event) => {
@@ -985,6 +1004,7 @@ $("connection-forms").addEventListener("submit", async (event) => {
       data: {
         key: $("key-" + id).value,
         model: $("model-" + id).value.trim(),
+        imageModel: $("image-model-" + id)?.value.trim() || "",
         remember: $("remember-" + id).checked,
       },
     });

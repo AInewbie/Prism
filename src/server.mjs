@@ -120,7 +120,7 @@ export function createApp({
         return reply(res, 200, {
           providers: PROVIDERS,
           connections: store.connections(),
-          version: "0.4.0",
+          version: "0.5.0",
         });
       const connectionMatch = path.match(
         /^\/api\/connections\/(openai|gemini|grok|claude)$/,
@@ -194,7 +194,7 @@ export function createApp({
           "format",
         );
         if (format === 'zip') {
-          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.4.0', run: presentRun(run) }, null, 2)]];
+          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.5.0', run: presentRun(run) }, null, 2)]];
           for (const file of run.artifacts || []) if (file.encoding === 'base64') entries.push(['files/' + file.id + '/' + file.name, Buffer.from(file.data, 'base64')]);
           return reply(res, 200, zipFiles(entries), 'application/zip');
         }
@@ -205,7 +205,7 @@ export function createApp({
             exportMarkdown(run),
             "text/markdown; charset=utf-8",
           );
-        return reply(res, 200, { application: "Prism", version: "0.4.0", run });
+        return reply(res, 200, { application: "Prism", version: "0.5.0", run });
       }
       if (action === "stop" && req.method === "POST") {
         for (const [key, controller] of active)
@@ -377,6 +377,7 @@ export function createApp({
               run.maxTokens,
               signal,
               fetcher,
+              action === 'answer' ? { outputMode: run.outputMode || 'text', imageModel: run.responses.find(r => r.provider === outputProvider)?.imageModel } : {},
             );
           }
           if (signal.aborted) throw new AppError("Request stopped.", 499);
@@ -386,7 +387,13 @@ export function createApp({
                 (r) => r.provider === outputProvider,
               );
               const { artifacts = [], ...content } = answer;
-              const saved = addProviderArtifacts(current, artifacts, { provider: outputProvider, model: outputModel, label: r.label });
+              const saved = addProviderArtifacts(current, artifacts, {
+                provider: outputProvider,
+                model: outputModel,
+                imageModel: r.imageModel || null,
+                outputMode: r.outputMode || 'text',
+                label: r.label,
+              });
               Object.assign(r, content, { artifactIds: saved.ids, warning: [content.warning, saved.warning].filter(Boolean).join(" "),
                 status: "complete",
                 elapsedMs: Math.round(performance.now() - started),
@@ -481,7 +488,7 @@ if (
     process.exitCode = 1;
   });
   app.server.listen(port, "127.0.0.1", () => {
-    console.log("Prism 0.4.0 — local model comparison studio");
+    console.log("Prism 0.5.0 — local model comparison studio");
     console.log("Open: http://127.0.0.1:" + port + "/#key=" + app.token);
     console.log("Keep this terminal open. Press Ctrl+C to stop.");
   });

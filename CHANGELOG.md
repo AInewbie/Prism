@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0 — 14 September 2026 · explicit visual requests
+
+- Add an explicit output selector for text/code/files or generated image with
+  provider text when available. Visual mode compares OpenAI and Gemini and
+  visibly excludes providers whose image-generation path is not implemented.
+- Keep separate text and image model IDs in Connections without changing stored
+  keys or existing sessions. Validate provider capabilities before any API call.
+- Use OpenAI's Responses image-generation tool with a forced tool choice and
+  Gemini's Interactions API with text+image response formats. Preserve returned
+  image bytes through the existing preview, scoring, draft history and exports.
+- Keep text behavior, synthesis and the native widget backward-compatible; the
+  widget currently starts text/code/file comparisons only.
+- Verify 38 automated tests and desktop/phone browser rich-output workflows,
+  including visual-mode provider gating and preserved artifacts. Live provider
+  calls, output quality, actual charges and physical Samsung use remain unverified.
+
 ## 0.4.0 — 14 September 2026 · mixed outputs
 
 - Retain typed output files, provenance, exact bytes and immutable IDs alongside

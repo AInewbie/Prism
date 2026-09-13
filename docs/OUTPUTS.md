@@ -1,4 +1,4 @@
-# Mixed outputs · Prism 0.4.0
+# Mixed outputs · Prism 0.5.0
 
 An answer is now text plus output files. Compare and score the whole answer,
 select it for a combined draft, and keep the original files with that draft.
@@ -37,16 +37,16 @@ version so a later edit cannot invalidate a saved draft's references.
 
 ### Provider coverage
 
-The adapters use the existing APIs. This release handles compatible output
-blocks when those APIs return them; it does **not** turn every text model into
-an image/video generator or automatically enable provider tools.
+The adapters handle compatible output blocks and now expose an explicit
+**Generated image + optional text** comparison mode for OpenAI and Gemini.
 
 - OpenAI Responses: text, image-generation result bytes and container-file
-  citation references. The current request does not enable image-generation or
-  code-execution tools; dedicated generation controls remain future work.
-- Gemini generateContent: visible text, inline media, file references,
+  citation references. Visual mode enables the configured image-generation tool
+  and forces that tool choice; the mainline text model stays separately configured.
+- Gemini generateContent handles visible text, inline media, file references,
   executable-code blocks and execution-result text. Thought parts are excluded.
-  Media generation depends on the chosen model and API configuration.
+  Visual mode uses the Interactions endpoint with the configured image model and
+  requests both text and image formats.
 - Grok Responses: text/code handling and compatible output blocks. xAI's
   separate image/video endpoints are not invoked by this release.
 - Claude Messages: text/code, compatible inline image/document content and
@@ -55,7 +55,7 @@ an image/video generator or automatically enable provider tools.
 - Files created in provider chat websites can be attached after download.
   Prism does not scrape those websites or reuse their subscription sessions.
 
-Live provider calls have not been made for this milestone. Schema fixtures
+Live provider calls have not been made for this milestone. Contract fixtures
 verify parsing, not live model availability, output quality or billing.
 
 ## Combining and export
@@ -147,8 +147,8 @@ persistence. Python 3 is needed for that independent ZIP verification.
 
 Official API references accessed 14 September 2026 (living documentation):
 
-- [OpenAI image-generation tool](https://developers.openai.com/api/docs/guides/tools-image-generation): result bytes in `image_generation_call`; enabling generation is a separate request capability.
-- [Gemini content Part and Blob schemas](https://ai.google.dev/api/generate-content#Part): MIME-tagged inline media, file references and visible/thought separation.
+- [OpenAI image-generation tool](https://developers.openai.com/api/docs/guides/tools-image-generation): configured Responses tool, forced tool choice, and returned image bytes.
+- [Gemini image generation](https://ai.google.dev/gemini-api/docs/image-generation): Interactions request and text+image response format.
 - [Claude Files API](https://platform.claude.com/docs/en/build-with-claude/files): generated-file references and separate authenticated downloads.
 - [xAI image generation](https://docs.x.ai/developers/model-capabilities/images/generation): separate generation endpoint and base64 output format.
 - [MDN iframe sandbox](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe): origin isolation and explicit sandbox permissions. Browser tests verify the actual policy used here; this is not a comprehensive security certification.

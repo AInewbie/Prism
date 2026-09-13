@@ -61,9 +61,13 @@ async function jsonRequest(url, init, fetcher, limit = 2_000_000) {
     );
   }
 }
-export function requestSpec(id, key, model, system, prompt, maxTokens) {
+export function requestSpec(id, key, model, system, prompt, maxTokens, options = {}) {
   provider(id);
   modelId(model);
+  const outputMode = options.outputMode || "text";
+  if (!['text', 'visual'].includes(outputMode)) throw new AppError('Choose a supported output type.');
+  if (outputMode === 'visual' && !['openai', 'gemini'].includes(id))
+    throw new AppError('This provider does not support image output in Prism yet.');
   let path, body;
   if (id === "openai" || id === "grok") {
     path = "/responses";
@@ -75,14 +79,27 @@ export function requestSpec(id, key, model, system, prompt, maxTokens) {
       ],
       max_output_tokens: maxTokens,
       store: false,
+      ...(outputMode === 'visual' ? {
+        tools: [{ type: 'image_generation', model: modelId(options.imageModel) }],
+        tool_choice: { type: 'image_generation' },
+      } : {}),
     };
   } else if (id === "gemini") {
-    path = "/models/" + encodeURIComponent(model) + ":generateContent";
-    body = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-      generationConfig: { maxOutputTokens: maxTokens },
-    };
+    if (outputMode === 'visual') {
+      path = '/interactions';
+      body = {
+        model: modelId(options.imageModel),
+        input: system ? 'Shared instructions:\n' + system + '\n\nPrompt:\n' + prompt : prompt,
+        response_format: [{ type: 'text' }, { type: 'image' }],
+      };
+    } else {
+      path = "/models/" + encodeURIComponent(model) + ":generateContent";
+      body = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+        generationConfig: { maxOutputTokens: maxTokens },
+      };
+    }
   } else {
     path = "/messages";
     body = {
@@ -125,8 +142,10 @@ export function parseAnswer(id, data) {
     if (data.status === "incomplete")
       warning = "Output may be incomplete. Review before scoring or combining.";
   } else if (id === "gemini") {
-    const c = data.candidates?.[0];
-    text = (c?.content?.parts || [])
+    const c = data.candidates?.[0], interaction = (data.steps || [])
+      .filter((step) => step.type === 'model_output')
+      .flatMap((step) => step.content || []);
+    text = (interaction.length ? interaction : c?.content?.parts || [])
       .filter((x) => !x.thought && typeof x.text === "string")
       .map((x) => x.text)
       .join("\n");
@@ -166,8 +185,9 @@ export async function ask(
   maxTokens,
   signal,
   fetcher = fetch,
+  options = {},
 ) {
-  const { url, init } = requestSpec(id, key, model, system, prompt, maxTokens);
+  const { url, init } = requestSpec(id, key, model, system, prompt, maxTokens, options);
   return parseAnswer(id, await jsonRequest(url, { ...init, signal }, fetcher, 18_000_000));
 }
 export async function listModels(id, key, signal, fetcher = fetch) {

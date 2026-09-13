@@ -32,6 +32,10 @@ export const PROVIDERS = [
   },
 ];
 export const CRITERIA = ["accuracy", "usefulness", "clarity"];
+export const OUTPUT_MODES = {
+  text: { name: "Text / code / files", providers: PROVIDERS.map((p) => p.id) },
+  visual: { name: "Generated image (plus text when available)", providers: ["openai", "gemini"] },
+};
 export class AppError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -75,16 +79,28 @@ export function makeRun(body, connections) {
   const maxTokens = Number(body.maxTokens ?? 2048);
   if (!Number.isInteger(maxTokens) || maxTokens < 256 || maxTokens > 8192)
     throw new AppError("Output limit must be between 256 and 8192 tokens.");
+  const outputMode = body.outputMode ?? "text";
+  if (!OUTPUT_MODES[outputMode]) throw new AppError("Choose a supported output type.");
+  const supported = new Set(OUTPUT_MODES[outputMode].providers);
   const order = body.providers.map((id) => {
     provider(id);
+    if (!supported.has(id))
+      throw new AppError(provider(id).name + " does not support " + OUTPUT_MODES[outputMode].name + " in Prism yet.");
     if (body.mode === "live" && !connections[id]?.hasKey)
       throw new AppError("Connect " + provider(id).name + " first.");
+    if (body.mode === "live" && outputMode === "visual" && !connections[id]?.imageModel)
+      throw new AppError("Choose an image model for " + provider(id).name + " in Connections first.");
     return {
       provider: id,
       model:
         body.mode === "demo"
           ? "Sample response"
-          : modelId(connections[id]?.model),
+          : modelId(id === "gemini" && outputMode === "visual" ? connections[id]?.imageModel : connections[id]?.model),
+      imageModel:
+        body.mode === "live" && outputMode === "visual"
+          ? modelId(connections[id]?.imageModel)
+          : "",
+      outputMode,
     };
   });
   for (let i = order.length - 1; i > 0; i--) {
@@ -102,6 +118,7 @@ export function makeRun(body, connections) {
     instructions,
     mode: body.mode,
     maxTokens,
+    outputMode,
     responses: order.map((p, i) => ({
       ...p,
       label: String.fromCharCode(65 + i),

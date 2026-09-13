@@ -28,7 +28,7 @@
       <div class="sidebar-bottom">
         <div class="local-note"><span class="status-dot"></span><div id="storage-note">Saved on this device<small>Your workspace stays with you.</small></div></div>
         <button class="nav-item" id="connections-sidebar"><span>⚙</span> Connections</button>
-        <div class="version">PRISM / EARLY ACCESS <span>0.3.2</span></div>
+        <div class="version">PRISM / EARLY ACCESS <span>0.5.0</span></div>
       </div>
     </aside>
     <div class="workspace">
@@ -42,7 +42,7 @@
         <form id="composer" class="composer">
           <div class="composer-label"><label for="prompt">What are you thinking about?</label><button type="button" class="text-button" id="sample-prompt">Try an example ↗</button></div>
           <textarea id="prompt" maxlength="30000" rows="4" required placeholder="Give me a practical plan to turn an idea into a useful app. Compare the trade-offs and tell me what to test first."></textarea>
-          <details class="advanced"><summary>Shared instructions & output limit</summary><div class="advanced-fields"><label>Instructions sent to every model<textarea id="instructions" maxlength="8000" rows="2" placeholder="Optional: audience, tone, format, constraints…"></textarea></label><label>Max output tokens per answer<input id="max-tokens" type="number" min="256" max="8192" step="1" value="2048"><small>A token limit is not a spending cap.</small></label></div></details>
+          <details class="advanced"><summary>Output type, shared instructions & limit</summary><div class="advanced-fields"><label>Requested output<select id="output-mode"><option value="text">Text / code / files · all providers</option><option value="visual">Generated image + optional text · OpenAI & Gemini</option></select><small>Code blocks and self-contained HTML apps are preserved as runnable files.</small></label><label>Instructions sent to every model<textarea id="instructions" maxlength="8000" rows="2" placeholder="Optional: audience, tone, format, constraints…"></textarea></label><label>Max output tokens per answer<input id="max-tokens" type="number" min="256" max="8192" step="1" value="2048"><small>Applies to text APIs. It is not a spending cap.</small></label></div></details>
           <div class="provider-picker" id="provider-picker"></div>
           <div class="composer-bottom">
             <label class="mode-control">Mode<select id="mode"><option value="demo">Demo · no API calls</option><option value="live">Live · provider API credits</option></select></label>
@@ -82,7 +82,7 @@
       </main>
     </div>
   </div>
-  <dialog id="connections-dialog"><div class="dialog-heading"><div><div class="eyebrow">YOUR PROVIDERS</div><h2>Connect your models</h2></div><button class="icon-button" id="close-connections" aria-label="Close connections">×</button></div><p class="dialog-description">Use each provider’s API key and a text model available to your account. This connects through their APIs, not your chat website login.</p><div id="connection-forms"></div><p class="privacy-note">Keys stay on the local server and are excluded from exports. “Remember on device” saves the key as a private, unencrypted local file entry. Leave it off to keep the key only until the server stops.</p><p class="privacy-note">Live comparisons send your prompt and shared instructions to each selected provider. Synthesis also sends the selected answers, scores and notes to the chosen provider. Provider API charges and data policies apply.</p></dialog>
+  <dialog id="connections-dialog"><div class="dialog-heading"><div><div class="eyebrow">YOUR PROVIDERS</div><h2>Connect your models</h2></div><button class="icon-button" id="close-connections" aria-label="Close connections">×</button></div><p class="dialog-description">Use each provider’s API key and models available to your account. OpenAI and Gemini can use a separate image-capable model. This connects through APIs, not your chat website login.</p><div id="connection-forms"></div><p class="privacy-note">Keys stay on the local server and are excluded from exports. “Remember on device” saves the key as a private, unencrypted local file entry. Leave it off to keep the key only until the server stops.</p><p class="privacy-note">Live comparisons send your prompt and shared instructions to each selected provider. Image requests can carry separate provider charges. Synthesis sends selected answer text, file metadata, scores and notes; file contents are not sent. Provider policies apply.</p></dialog>
   <div id="toast" role="status" aria-live="polite" hidden></div>
   <noscript>Prism needs JavaScript enabled to run the comparison workspace.</noscript>
 </body>

@@ -133,3 +133,21 @@ Sources checked 13 September 2026: [MDN cookie attributes](https://developer.moz
 for HttpOnly, SameSite, Secure and host-only cookie behavior, and
 [Node crypto](https://nodejs.org/api/crypto.html) for scrypt, random bytes and
 timing-safe comparison. These guide the implementation, not a security certification.
+
+
+### Session search and the offline demo (0.3.2)
+
+The browser app filters existing session summaries locally by saved title and
+Demo/Live mode; typing in search makes no extra API requests. The current prompt
+or comparison is retained. Search currently covers the saved title, not response
+bodies. The offline demo searches its saved prompts and shares the same helper.
+
+Reference: [W3C target-size guidance](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html),
+read 14 September 2026, supports larger touch controls; the new phone search
+controls are at least 44px high. This is a targeted improvement, not a complete
+accessibility audit. [MDN localStorage documentation](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)
+(last modified 28 July 2026, read 14 September 2026) describes local-file storage
+as browser-dependent. In this environment, the incognito file test lost local
+state across reload; the disposable regular browser profile retained it at both
+screen sizes. Export any demo result you want to keep. Full server-app storage
+is independent of this local-file browser behavior.

@@ -16,12 +16,18 @@
       <button class="new-button" id="new-comparison"><span>+</span> New comparison</button>
       <div class="sidebar-heading">YOUR WORKSPACE</div>
       <button class="nav-item active" id="studio-nav"><span>▦</span> Comparison studio</button>
-      <div class="history-header"><div class="sidebar-heading">RECENT SESSIONS</div><span id="history-count">0</span></div>
+      <div class="history-header"><div class="sidebar-heading">SAVED SESSIONS</div><span id="history-count">0</span></div>
+      <section class="session-tools" aria-label="Find a comparison">
+        <label for="session-search">Find a comparison <kbd>Ctrl / ⌘ K</kbd></label>
+        <input id="session-search" type="search" placeholder="Search session titles…" autocomplete="off" aria-controls="history-list">
+        <div class="session-filter-row"><select id="session-mode" aria-label="Filter sessions by mode"><option value="all">All sessions</option><option value="demo">Demo sessions</option><option value="live">Live sessions</option></select><button class="button" id="clear-session-search" type="button" disabled>Clear</button></div>
+        <p id="session-result-count" role="status" aria-live="polite">0 of 0 sessions</p>
+      </section>
       <div id="history-list" class="history-list"><p class="quiet">Your comparisons will appear here.</p></div>
       <div class="sidebar-bottom">
         <div class="local-note"><span class="status-dot"></span><div id="storage-note">Saved on this device<small>Your workspace stays with you.</small></div></div>
         <button class="nav-item" id="connections-sidebar"><span>⚙</span> Connections</button>
-        <div class="version">PRISM / EARLY ACCESS <span>0.1</span></div>
+        <div class="version">PRISM / EARLY ACCESS <span>0.3.2</span></div>
       </div>
     </aside>
     <div class="workspace">

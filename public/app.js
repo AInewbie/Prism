@@ -1,3 +1,5 @@
+import { filterSessions } from "./session-search.js";
+
 const $ = (id) => document.getElementById(id);
 const esc = (value) =>
   String(value ?? "").replace(
@@ -191,9 +193,14 @@ async function refreshHistory() {
   renderHistory();
 }
 function renderHistory() {
+  const query = $("session-search").value;
+  const mode = $("session-mode").value;
+  const matches = filterSessions(S.history, { query, mode });
   $("history-count").textContent = S.history.length;
-  $("history-list").innerHTML = S.history.length
-    ? S.history
+  $("session-result-count").textContent = matches.length + " of " + S.history.length + " sessions";
+  $("clear-session-search").disabled = !query && mode === "all";
+  $("history-list").innerHTML = matches.length
+    ? matches
         .map(
           (run) =>
             '<button class="history-item ' +
@@ -218,7 +225,9 @@ function renderHistory() {
             " answers</small></button>",
         )
         .join("")
-    : '<p class="quiet">Your comparisons will appear here.</p>';
+    : '<p class="quiet">' + (S.history.length
+      ? 'No sessions match. Try another title or clear the filters.'
+      : 'Your comparisons will appear here.') + '</p>';
 }
 function sortedResponses() {
   const result = [...S.run.responses];
@@ -781,6 +790,22 @@ $("history-list").onclick = (event) => {
   const button = event.target.closest("[data-load]");
   if (button) loadRun(button.dataset.load);
 };
+$("session-search").oninput = renderHistory;
+$("session-mode").onchange = renderHistory;
+$("clear-session-search").onclick = () => {
+  $("session-search").value = "";
+  $("session-mode").value = "all";
+  renderHistory();
+  $("session-search").focus();
+};
+document.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" &&
+      !event.altKey && !document.querySelector("dialog[open]")) {
+    event.preventDefault();
+    $("session-search").focus();
+    $("session-search").select();
+  }
+});
 $("blind").onchange = () => {
   S.blind = $("blind").checked;
   renderSession();

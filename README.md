@@ -1,12 +1,35 @@
 # Prism — model comparison studio
 
-**Version 0.3.1 · browser sign-in preview · 13 September 2026**
+**Version 0.3.2 · searchable sessions · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
 
-## New: normal browser sign-in
+## New: find saved comparisons
+
+Use **Find a comparison** to search saved session titles, with accent-insensitive
+matching and Demo/Live filters. **Ctrl+K** (or **⌘K**) focuses search. Search does
+not change the open comparison or an unfinished prompt; **Clear** resets both
+filters. Phone history uses readable, full-width rows with larger controls.
+
+The downloadable [offline HTML demo](demo/Prism-demo.html) includes saved-prompt
+search using the same dependency-free matching module. Open it directly in a
+browser; it needs no server or compilation. It uses fixed samples and never
+calls a model provider. Demo saving depends on the browser's handling of local
+files and private mode; export JSON to keep a copy.
+
+For maintainers: edit `public/session-search.js`, then run `npm run sync:html-demo`
+to embed the shared helper in the downloadable file. This is a packaging command
+for development; users simply open the already prepared HTML file.
+
+Verification: `npm test`, `npm run check`, `npm run test:session-search`, and
+`npm run test:html-demo`. Browser checks use Playwright/Chromium; the environment
+variables in [browser verification](docs/BROWSER_ACCESS.md) apply. The HTML check
+uses a disposable regular profile because local-file storage in private contexts
+can be ephemeral. No paid requests are needed.
+
+## Normal browser sign-in
 
 Prism can now use a stable address and a workspace password, with no rotating
 launch token in the link. Once a server operator hosts it, users just open the

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2 — 14 September 2026 · searchable sessions
+
+- Search saved session titles, combine Demo/Live filters, see result counts and
+  reset without changing the current comparison or unfinished prompt.
+- Add Ctrl/⌘K search focus and readable phone history with larger touch controls.
+- Share matching logic with the downloadable offline demo through a small
+  dependency-free module and a reproducible inline packaging script.
+- Preserve existing sessions, scoring, draft history, connections and API behavior.
+- Verify 29 automated tests, full browser workflows, desktop/phone history search
+  and direct-open HTML demo use without provider calls.
+
 ## Offline HTML demo — 14 September 2026
 
 - Add one self-contained HTML file for trying Prism without installation,

@@ -214,6 +214,14 @@ strong {
   min-height: 60px;
   flex: 1;
 }
+.session-tools { display: grid; gap: 8px; min-width: 0; margin: 10px 0; }
+.session-tools label { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 650; }
+.session-tools kbd { color: var(--muted); font: inherit; font-size: 10px; }
+.session-tools input, .session-tools select { min-width: 0; width: 100%; min-height: 40px; padding: 8px 10px; background: white; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; }
+.session-tools input:focus-visible, .session-tools select:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.session-filter-row { display: flex; gap: 8px; }
+.session-filter-row .button { min-height: 40px; padding: 8px 12px; }
+.session-tools p { margin: 0; font-size: 11px; color: var(--muted); }
 .history-list .quiet {
   font-size: 11px;
   padding: 10px 12px;
@@ -1449,28 +1457,29 @@ dialog::backdrop {
   .sidebar-bottom {
     display: none;
   }
+  .session-tools { width: 100%; margin: 0; }
+  .session-tools input, .session-tools select { font-size: 16px; min-height: 44px; }
+  .session-tools .button { min-height: 44px; }
+  .session-tools kbd { display: none; }
   .history-list {
-    display: flex;
+    display: grid;
     flex: none;
-    max-height: 65px;
+    max-height: 150px;
     gap: 5px;
     width: 100%;
     padding-top: 4px;
   }
   .history-item {
-    min-width: 150px;
-    max-width: 190px;
-    padding: 8px;
-    min-height: 42px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 10px;
+    min-height: 54px;
   }
   .history-item strong {
-    font-size: 9px;
+    font-size: 13px;
   }
   .history-item small {
-    font-size: 8px;
-  }
-  .history-list:has(.quiet) {
-    display: none;
+    font-size: 11px;
   }
   .topbar {
     height: 55px;

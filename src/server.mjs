@@ -26,6 +26,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assets = new Map([
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
+  ["/session-search.js", ["session-search.js", "text/javascript; charset=utf-8"]],
   ["/styles.css", ["styles.css", "text/css; charset=utf-8"]],
   ["/logo.svg", ["logo.svg", "image/svg+xml"]],
 ]);

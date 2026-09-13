@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "prism": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}/plugins/prism/server.mjs"]
+    }
+  }
+}

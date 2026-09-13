@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Prism · Model comparison studio</title>
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to workspace</a>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="Prism home"><img src="/logo.svg" width="36" height="36" alt=""><span>prism<span class="brand-tag">A wider perspective.</span></span></a>
+      <button class="new-button" id="new-comparison"><span>+</span> New comparison</button>
+      <div class="sidebar-heading">YOUR WORKSPACE</div>
+      <button class="nav-item active" id="studio-nav"><span>▦</span> Comparison studio</button>
+      <div class="history-header"><div class="sidebar-heading">RECENT SESSIONS</div><span id="history-count">0</span></div>
+      <div id="history-list" class="history-list"><p class="quiet">Your comparisons will appear here.</p></div>
+      <div class="sidebar-bottom">
+        <div class="local-note"><span class="status-dot"></span><div id="storage-note">Saved on this device<small>Your workspace stays with you.</small></div></div>
+        <button class="nav-item" id="connections-sidebar"><span>⚙</span> Connections</button>
+        <div class="version">PRISM / EARLY ACCESS <span>0.1</span></div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="breadcrumb">Workspace <span>/</span> <strong>Comparison studio</strong></div><div class="browser-account-actions"><button class="button subtle" id="connections-button">Connections <span id="connection-count">0/4</span></button><button class="button subtle" id="sign-out" hidden>Sign out</button></div></header>
+      <main id="main" tabindex="-1">
+        <section id="welcome" class="welcome">
+          <div class="eyebrow"><span></span> MANY MODELS. YOUR JUDGMENT.</div>
+          <h1>One prompt. <em>More perspective.</em></h1>
+          <p>Ask across models. Find what matters. Bring the best together.</p>
+        </section>
+        <form id="composer" class="composer">
+          <div class="composer-label"><label for="prompt">What are you thinking about?</label><button type="button" class="text-button" id="sample-prompt">Try an example ↗</button></div>
+          <textarea id="prompt" maxlength="30000" rows="4" required placeholder="Give me a practical plan to turn an idea into a useful app. Compare the trade-offs and tell me what to test first."></textarea>
+          <details class="advanced"><summary>Shared instructions & output limit</summary><div class="advanced-fields"><label>Instructions sent to every model<textarea id="instructions" maxlength="8000" rows="2" placeholder="Optional: audience, tone, format, constraints…"></textarea></label><label>Max output tokens per answer<input id="max-tokens" type="number" min="256" max="8192" step="1" value="2048"><small>A token limit is not a spending cap.</small></label></div></details>
+          <div class="provider-picker" id="provider-picker"></div>
+          <div class="composer-bottom">
+            <label class="mode-control">Mode<select id="mode"><option value="demo">Demo · no API calls</option><option value="live">Live · provider API credits</option></select></label>
+            <div class="launch"><span id="send-caption">4 models selected</span><button class="button primary" id="send-button" type="submit">Compare answers <span>↗</span></button></div>
+          </div>
+          <p id="mode-note" class="mode-note">Explore with clearly labelled sample answers. Add your API keys for real responses.</p>
+        </form>
+        <section id="empty-state" class="empty-state">
+          <div class="workflow-step"><span>01</span><div><h3>Ask once</h3><p>The same prompt goes to your selected models.</p></div></div>
+          <div class="workflow-step"><span>02</span><div><h3>Compare & score</h3><p>Read side by side. Review blind if you prefer.</p></div></div>
+          <div class="workflow-step"><span>03</span><div><h3>Make it yours</h3><p>Combine selected answers into an editable draft.</p></div></div>
+        </section>
+        <section id="session" hidden>
+          <div class="session-heading"><div><div class="eyebrow">YOUR COMPARISON</div><h2 id="session-title">The comparison</h2></div><div class="session-actions"><button class="button danger" id="stop-button" hidden>Stop requests</button><button class="button" id="export-json">Export JSON</button><button class="button" id="export-md">Export Markdown ↗</button></div></div>
+          <div class="saved-prompt"><span class="small-label">PROMPT</span><p id="saved-prompt-text"></p><details id="saved-instructions"><summary>Shared instructions</summary><p></p></details></div>
+          <div class="review-toolbar"><div class="view-tabs" role="tablist" aria-label="Comparison views"><button role="tab" aria-selected="true" data-view="answers">Answers <span id="answer-count"></span></button><button role="tab" aria-selected="false" data-view="scorecard">Scorecard</button><button role="tab" aria-selected="false" data-view="combined">Combined answer</button></div><div class="review-options"><label class="check-label"><input id="blind" type="checkbox"> Blind review</label><label class="sr-only" for="sort">Sort answers</label><select id="sort"><option value="original">Original order</option><option value="score">Highest scored</option><option value="speed">Fastest</option></select></div></div>
+          <p id="session-note" class="session-note"></p>
+          <section id="answers-view" aria-label="Model answers"><div id="answer-grid" class="answer-grid"></div><div class="selection-bar"><p><strong id="selected-count">0 answers</strong> selected for your combined draft</p><button class="button primary" id="go-combine">Combine selected <span>→</span></button></div></section>
+          <section id="scorecard-view" aria-label="Your scorecard" hidden></section>
+          <section id="combined-view" aria-label="Combine answers" hidden>
+            <div class="combine-layout">
+              <section class="combine-controls"><div class="eyebrow">BUILD YOUR BEST ANSWER</div><h3>Better, together.</h3><p>Choose the answers to draw from. Your scores and notes help guide a synthesis.</p><div id="combine-sources"></div><label class="field">Direction for the combined answer<textarea id="combine-direction" rows="3" maxlength="8000" placeholder="Keep the actionable steps, resolve overlap, and flag disagreements."></textarea></label><button class="button" id="compile-button">Assemble editable draft <span>↗</span></button><div class="or-divider">or ask a model to synthesize</div><label class="field">Synthesis model<select id="synth-provider"></select></label><button class="button primary" id="synthesize-button">Synthesize selected answers <span>✧</span></button><p class="quiet" id="synthesis-note"></p><details class="payload-preview"><summary>Preview what will be sent</summary><pre id="synthesis-preview"></pre></details></section>
+              <section class="combined-editor"><div class="editor-heading"><div><h3>Your combined answer</h3><small id="combined-meta">An editable space for the strongest ideas.</small></div><span class="save-state" id="combined-save-state">No draft yet</span></div><textarea id="combined-text" rows="20" maxlength="550000" aria-label="Combined answer draft" placeholder="Assemble or synthesize selected answers, then shape the result in your own words."></textarea><div class="editor-footer"><button class="button" id="copy-combined">Copy draft</button><button class="button primary" id="save-combined">Save draft</button></div></section>
+            </div>
+            <details class="draft-history" id="draft-history">
+              <summary>Draft history <span id="draft-revision-count">0 saved revisions</span></summary>
+              <p class="quiet">Saved drafts are kept when you edit, assemble, synthesize or restore. Preview a revision before restoring it. Unsaved typing is not recorded.</p>
+              <label class="field">Saved revision<select id="history-select"></select></label>
+              <p id="history-meta" class="quiet"></p>
+              <textarea id="history-preview" rows="8" readonly aria-label="Saved revision preview"></textarea>
+              <button id="restore-draft" class="button">Restore this revision</button>
+              <p class="quiet">Restoring also keeps your current saved draft in history. Save unsaved edits first.</p>
+            </details>
+          </section>
+        </section>
+        <footer class="workspace-footer"><span>Different answers. A more considered decision.</span><span>Built for your judgment <span class="tiny-prism">△</span></span></footer>
+      </main>
+    </div>
+  </div>
+  <dialog id="connections-dialog"><div class="dialog-heading"><div><div class="eyebrow">YOUR PROVIDERS</div><h2>Connect your models</h2></div><button class="icon-button" id="close-connections" aria-label="Close connections">×</button></div><p class="dialog-description">Use each provider’s API key and a text model available to your account. This connects through their APIs, not your chat website login.</p><div id="connection-forms"></div><p class="privacy-note">Keys stay on the local server and are excluded from exports. “Remember on device” saves the key as a private, unencrypted local file entry. Leave it off to keep the key only until the server stops.</p><p class="privacy-note">Live comparisons send your prompt and shared instructions to each selected provider. Synthesis also sends the selected answers, scores and notes to the chosen provider. Provider API charges and data policies apply.</p></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript>Prism needs JavaScript enabled to run the comparison workspace.</noscript>
+</body>
+</html>

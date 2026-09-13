@@ -1,0 +1,24 @@
+{
+  "name": "llm-comparison-studio",
+  "version": "0.3.1",
+  "private": true,
+  "description": "Prism: compare, score and combine answers from multiple language models.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "start:browser": "node src/browser-server.mjs",
+    "start:plugin": "node plugins/prism/server.mjs",
+    "preview:plugin": "node plugins/prism/preview.mjs",
+    "test:plugin-browser": "node test/plugin-browser.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node --check src/server.mjs && node --check src/providers.mjs && node --check src/store.mjs && node --check src/core.mjs && node --check src/drafts.mjs && node --check src/browser-session.mjs && node --check src/browser-server.mjs && node --check public/browser-login.js && node --check public/app.js && node --check plugins/prism/backend.mjs && node --check plugins/prism/mcp.mjs && node --check plugins/prism/server.mjs && node --check plugins/prism/preview.mjs && node --check plugins/prism/widget.js",
+    "test:browser": "node test/browser.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.6.4"
+  }
+}

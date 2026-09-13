@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Prism · Compare models</title><style>/* PRISM_CSS */</style></head>
+<body><main>
+  <header><div><span class="eyebrow">MANY MODELS. YOUR JUDGMENT.</span><h1>△ prism</h1></div><span id="connection-status" class="badge">Connecting…</span></header>
+  <p class="intro">One prompt. More perspective. Compare, score and shape your best answer.</p>
+  <div id="notice" role="status" aria-live="polite">Connecting to the ChatGPT host…</div>
+  <section class="panel"><div class="row"><label class="grow">Saved comparison<select id="sessions"><option value="">New comparison</option></select></label><button id="refresh">Refresh</button></div>
+    <form id="composer"><label>Your prompt<textarea id="prompt" rows="3" maxlength="30000" required placeholder="Compare practical ways to turn an idea into a useful app."></textarea></label>
+      <details><summary>Shared instructions & limits</summary><label>Instructions<textarea id="instructions" rows="2" maxlength="8000"></textarea></label><label>Max output tokens per answer<input id="max-tokens" type="number" min="256" max="8192" value="2048"></label><p class="quiet">This limits tokens, not spending.</p></details>
+      <div id="providers" class="provider-picks"></div>
+      <div class="row"><label>Mode<select id="mode"><option value="demo">Demo · no API calls</option><option value="live">Live · provider credits</option></select></label><button id="compare" type="submit" class="primary">Compare answers →</button></div>
+      <label class="check" id="live-approval" hidden><input id="ack-paid" type="checkbox">I approve sending this prompt to the selected providers and using their API credits.</label>
+      <p id="mode-note" class="quiet">Demo uses fixed illustrative samples—not actual answers from these models.</p>
+    </form>
+    <details id="models"><summary>Provider connections & model IDs</summary><p class="quiet">Enter API keys only in the server’s local environment—not in ChatGPT. This interface can change model IDs, but cannot view or change keys.</p><div id="model-settings"></div></details>
+  </section>
+  <section id="comparison" hidden>
+    <div class="row"><h2 id="run-title">Your comparison</h2><span id="progress" class="badge"></span></div>
+    <p id="run-prompt" class="run-prompt"></p><p id="run-mode" class="quiet"></p>
+    <div class="row toolbar"><label class="check"><input id="blind" type="checkbox">Blind review</label><button id="stop">Stop requests</button><button id="export">Export JSON</button></div>
+    <p class="quiet">Your 1–5 scores are subjective. Overall is shown only when all three criteria are rated. Blind mode hides labels; answers may still identify their model.</p>
+    <div id="answers" class="answers"></div>
+    <section class="panel combined"><div class="row"><h2>Build your best answer</h2><span id="selection" class="badge"></span></div>
+      <p class="quiet">Select sources in the answer cards and save each review. Assemble locally, or ask one model to synthesize selected text, scores and notes.</p>
+      <label>Direction<textarea id="direction" rows="2" maxlength="8000" placeholder="Keep the useful steps, reconcile overlap and flag disagreements."></textarea></label>
+      <div class="row"><button id="compile">Assemble editable draft</button><label class="grow">Synthesis model<select id="synth-provider"></select></label><button id="synthesize" class="primary">Synthesize selected</button></div>
+      <label class="check" id="synth-approval"><input id="ack-synth" type="checkbox">For live synthesis, I approve sending the prompt, selected answers, scores, notes and direction to this provider; API charges apply.</label>
+      <details><summary>Preview what will be sent</summary><pre id="payload"></pre></details>
+      <label>Your combined answer<textarea id="draft" rows="8" maxlength="550000"></textarea></label>
+      <div class="row"><span id="draft-status" class="quiet">No draft yet</span><button id="save-draft" class="primary">Save draft</button></div>
+      <details id="history"><summary>Draft history <span id="history-count"></span></summary><label>Saved revision<select id="revisions"></select></label><textarea id="revision-preview" aria-label="Saved revision preview" rows="5" readonly></textarea><button id="restore">Restore selected revision</button><p class="quiet">Restoring also keeps your current saved draft. Unsaved typing is not recorded.</p></details>
+    </section>
+  </section>
+  <footer>Prism 0.3.0 · private-server plugin · answer text is not independently fact-checked</footer>
+</main><script>/* PRISM_JS */</script></body></html>

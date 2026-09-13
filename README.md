@@ -1,12 +1,27 @@
 # Prism — model comparison studio
 
-**Version 0.4.0 · text, images and output files · 14 September 2026**
+**Version 0.5.0 · explicit visual requests · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
 
-## New: answers with files
+## New: request generated images explicitly
+
+Open **Output type, shared instructions & limit** and choose **Generated image +
+optional text**. Prism restricts that comparison to OpenAI and Gemini, requires a
+separate image-capable model for each live connection, and uses each provider's
+documented image contract instead of merely hoping a text model returns media.
+The resulting image and any provider text stay together for preview, scoring,
+combination, draft history and ZIP export.
+
+OpenAI uses its Responses image-generation tool with an explicit tool choice.
+Gemini uses the Interactions API with text and image response formats. Grok and
+Claude remain selectable for text/code/file comparisons; Prism visibly disables
+them for generated-image comparisons until their output paths are implemented.
+No provider calls are made when changing the selector.
+
+## Answers with files
 
 Prism now keeps attachments with each answer. Inspect images and code, run
 single-file HTML apps in an isolated preview, download any file type, and keep
@@ -18,9 +33,9 @@ Open [the HTML demo](demo/Prism-demo.html), compare the samples, inspect
 **tiny-counter.html → Run preview**, and try the app. No setup or compilation.
 The full standalone/browser app also needs no dependency installation.
 
-This is a first mixed-output version: documents and multi-file app ZIPs download
-without running; provider-specific generation tools and remote file retrieval
-are not enabled automatically. Synthesis combines text and retains files; it
+Documents and multi-file app ZIPs download without running; xAI image/video
+generation, Claude generated-file retrieval and arbitrary remote file retrieval
+are not enabled. Synthesis combines text and retains files; it
 receives file metadata, not image/file contents. Files are limited to 4 MB each.
 See [supported outputs, limits and verification](docs/OUTPUTS.md).
 
@@ -127,10 +142,11 @@ node src/server.mjs
 2. Enter each provider's API key. Leave **Remember on device** off to keep the key
    in server memory until shutdown, or enable it for persistence.
 3. **Save connection**, then **Load models**. Choose a text-generation model ID
-   available to your account and save again. You can also enter an ID manually.
+   available to your account. For OpenAI/Gemini visual comparisons, also enter a
+   separate image-capable model ID. You can enter IDs manually.
    Model listing can include non-text models; Gemini's list is filtered for
    generateContent support. No model availability is presumed.
-4. Start a **New comparison**, select **Live**, choose providers and submit.
+4. Start a **New comparison**, choose the requested output, select **Live**, choose providers and submit.
    The same prompt, common instructions and output limit go to all selected
    providers. Each answer appears independently.
 5. API use is billed by the providers. Your chat website login/subscription is
@@ -262,9 +278,11 @@ and [CHANGELOG](CHANGELOG.md).
 
 ## Current limits
 
-Text only, one configured model per provider per run. No attachments, web
-browsing, token streaming, automatic judge, cross-device sync or public hosting.
-Answers appear when each provider completes.
+Prism compares text/code/files across all four providers and generated images
+across OpenAI and Gemini. xAI image/video generation and Claude output retrieval
+remain separate future adapters. There is no web browsing, token streaming,
+automatic judge, cross-device sync or public hosting. Answers appear when each
+provider completes.
 
 Requests time out after two minutes; output is limited to 256–8192 tokens per
 call. Neither is a dollar-spending cap. Some reasoning models may need larger

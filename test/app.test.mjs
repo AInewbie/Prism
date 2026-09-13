@@ -146,6 +146,62 @@ test("all four adapters send the same text and bounded output to fixed endpoints
     }
   }
 });
+test("visual requests use explicit provider image contracts and preserve image-only output", async () => {
+  const openai = requestSpec(
+    "openai", "secret", "reasoning-model", "Shared", "Draw this", 1024,
+    { outputMode: "visual", imageModel: "image-model" },
+  );
+  const openaiBody = JSON.parse(openai.init.body);
+  assert.ok(openai.url.endsWith("/responses"));
+  assert.deepEqual(openaiBody.tools, [{ type: "image_generation", model: "image-model" }]);
+  assert.deepEqual(openaiBody.tool_choice, { type: "image_generation" });
+
+  const gemini = requestSpec(
+    "gemini", "secret", "image-model", "Shared", "Draw this", 1024,
+    { outputMode: "visual", imageModel: "image-model" },
+  );
+  const geminiBody = JSON.parse(gemini.init.body);
+  assert.ok(gemini.url.endsWith("/interactions"));
+  assert.equal(geminiBody.model, "image-model");
+  assert.deepEqual(geminiBody.response_format, [{ type: "text" }, { type: "image" }]);
+  assert.match(geminiBody.input, /Shared instructions:\nShared[\s\S]*Prompt:\nDraw this/);
+
+  const parsed = parseAnswer("gemini", {
+    steps: [{ type: "model_output", content: [
+      { type: "text", text: "Visual explanation" },
+      { type: "image", mime_type: "image/png", data: Buffer.from("png").toString("base64") },
+    ] }],
+  });
+  assert.equal(parsed.text, "Visual explanation");
+  assert.equal(parsed.artifacts.length, 1);
+  assert.equal(Buffer.from(parsed.artifacts[0].data, "base64").toString(), "png");
+  assert.throws(
+    () => requestSpec("claude", "secret", "model", "", "Draw", 1024, { outputMode: "visual", imageModel: "image" }),
+    /does not support image output/,
+  );
+});
+test("visual comparisons require capable providers and separate image models without changing text defaults", () => {
+  const connection = { hasKey: true, model: "text-model", imageModel: "image-model" };
+  const run = makeRun(
+    { prompt: "Draw", providers: ["openai", "gemini"], mode: "live", outputMode: "visual" },
+    { openai: connection, gemini: connection },
+  );
+  assert.equal(run.outputMode, "visual");
+  assert.ok(run.responses.every((r) => r.outputMode === "visual" && r.imageModel === "image-model"));
+  assert.equal(run.responses.find((r) => r.provider === "openai").model, "text-model");
+  assert.equal(run.responses.find((r) => r.provider === "gemini").model, "image-model");
+  assert.throws(
+    () => makeRun({ prompt: "Draw", providers: ["claude"], mode: "demo", outputMode: "visual" }, {}),
+    /does not support/,
+  );
+  assert.throws(
+    () => makeRun({ prompt: "Draw", providers: ["openai"], mode: "live", outputMode: "visual" }, {
+      openai: { hasKey: true, model: "text-model", imageModel: "" },
+    }),
+    /image model/,
+  );
+  assert.equal(makeRun({ prompt: "Text", providers: ["claude"], mode: "demo" }, {}).outputMode, "text");
+});
 test("partial outputs are flagged; empty outputs and upstream errors are not disguised as answers", async () => {
   assert.ok(
     parseAnswer("openai", { ...fixtures.openai, status: "incomplete" }).warning,
@@ -276,6 +332,7 @@ test("optional remembered keys persist privately while session-only keys do not"
     store.setConnection("openai", {
       key: "fixture-remember",
       model: "test",
+      imageModel: "image-test",
       remember: true,
     });
     store.setConnection("claude", {
@@ -284,6 +341,7 @@ test("optional remembered keys persist privately while session-only keys do not"
       remember: false,
     });
     assert.equal(store.connections().openai.hasKey, true);
+    assert.equal(store.connections().openai.imageModel, "image-test");
     assert.ok(
       !JSON.stringify(store.connections()).includes("fixture-remember"),
     );
@@ -302,6 +360,7 @@ test("optional remembered keys persist privately while session-only keys do not"
       model: "test-two",
       remember: false,
     });
+    assert.equal(store.connections().openai.imageModel, "image-test");
     assert.equal(store.key("openai"), "fixture-remember");
     assert.ok(
       !readFileSync(join(dir, "workspace.json"), "utf8").includes(
@@ -594,6 +653,50 @@ test("live requests run concurrently, isolate provider failure, and reject dupli
   assert.equal(combined.status, 200);
   assert.equal(calls, 5);
   assert.equal(combined.body.run.combined.method, "AI synthesis");
+});
+test("live visual comparison dispatches provider-specific requests and saves returned images", async (t) => {
+  const seen = [];
+  const image = Buffer.from("fixture-image").toString("base64");
+  const { call } = await boot(t, {
+    fetcher: async (url, options) => {
+      seen.push({ url, body: JSON.parse(options.body) });
+      return url.includes("googleapis")
+        ? Response.json({ steps: [{ type: "model_output", content: [
+            { type: "text", text: "Gemini visual" },
+            { type: "image", mime_type: "image/png", data: image },
+          ] }] })
+        : Response.json({ status: "completed", output: [
+            { type: "image_generation_call", output_format: "png", result: image },
+          ] });
+    },
+  });
+  for (const id of ["openai", "gemini"])
+    await call("/connections/" + id, "PUT", {
+      key: "fixture-secret",
+      model: "text-model",
+      imageModel: "image-model",
+      remember: false,
+    });
+  const made = await call("/runs", "POST", {
+    prompt: "Create a visual",
+    instructions: "Keep it calm",
+    providers: ["openai", "gemini"],
+    mode: "live",
+    outputMode: "visual",
+  });
+  await Promise.all(made.body.run.responses.map((r) =>
+    call("/runs/" + made.body.run.id + "/answer", "POST", { provider: r.provider }),
+  ));
+  const run = (await call("/runs/" + made.body.run.id)).body.run;
+  assert.equal(run.outputMode, "visual");
+  assert.equal(run.responses.filter((r) => r.status === "complete").length, 2);
+  assert.equal(run.artifacts.length, 2);
+  assert.ok(run.artifacts.every((file) => file.mimeType === "image/png"));
+  assert.ok(seen.find((request) => request.url.endsWith("/responses")).body.tool_choice);
+  assert.deepEqual(
+    seen.find((request) => request.url.endsWith("/interactions")).body.response_format,
+    [{ type: "text" }, { type: "image" }],
+  );
 });
 test("stop cancels an in-flight request without automatic replay", async (t) => {
   let calls = 0;

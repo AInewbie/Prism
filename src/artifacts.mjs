@@ -61,9 +61,11 @@ export function providerArtifacts(id, data, answerText) {
     warnings.push('A provider file reference needs a downloaded copy. Use Attach outputs to keep the actual file.');
   };
   if (id === 'gemini') {
-    for (const part of data.candidates?.[0]?.content?.parts || []) {
+    const interaction = (data.steps || []).filter(step => step.type === 'model_output').flatMap(step => step.content || []);
+    for (const part of interaction.length ? interaction : data.candidates?.[0]?.content?.parts || []) {
       if (part.thought) continue;
-      const inline = part.inlineData || part.inline_data, remote = part.fileData || part.file_data;
+      const inline = part.type === 'image' && part.data ? { data: part.data, mime_type: part.mime_type } : part.inlineData || part.inline_data,
+        remote = part.fileData || part.file_data;
       if (inline) {
         const type = inline.mimeType || inline.mime_type;
         const ext = Object.keys(types).find(x => types[x] === type) || 'bin';

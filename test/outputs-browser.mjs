@@ -86,9 +86,20 @@ for (const width of [1440, 412]) {
     await page.reload();
     await page.getByRole('tab', { name: 'Combined answer', exact: true }).click();
     assert.equal(await page.locator('#combined-files .output-item').count(), 3);
+    await page.locator('#new-comparison').click();
+    await page.locator('.advanced > summary').click();
+    await page.locator('#output-mode').selectOption('visual');
+    assert.equal(await page.locator('[data-provider-pick="grok"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-provider-pick="claude"]').isDisabled(), true);
+    assert.match(await page.locator('#send-caption').innerText(), /2 models · generated image/);
+    await page.locator('#prompt').fill('Create one calm visual and briefly explain the design choice.');
+    await page.locator('#send-button').click();
+    await page.waitForFunction(() => document.getElementById('answer-count')?.textContent === '2/2' && document.getElementById('stop-button').hidden);
+    assert.equal(await page.locator('#answer-grid .output-item').count(), 2);
+    assert.match(await page.locator('#session-note').innerText(), /Requested generated image/);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await page.screenshot({ path: resolve(output, width + '-combined-files.png'), fullPage: true });
+    await page.screenshot({ path: resolve(output, width + '-visual-output-mode.png'), fullPage: true });
     assert.deepEqual(errors, []);
-    console.log(width + 'px: image preview, interactive app, isolated scripts, exact downloads, attachment upload, combined files, ZIP and reload passed.');
+    console.log(width + 'px: image preview, interactive app, isolated scripts, exact downloads, attachment upload, combined files, explicit visual mode, ZIP and reload passed.');
   } finally { await browser.close(); await app.close(); await rm(directory, { recursive: true, force: true }); }
 }

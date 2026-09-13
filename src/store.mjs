@@ -109,6 +109,7 @@ export class Store {
         p.id,
         {
           model: this.data.connections[p.id]?.model || "",
+          imageModel: this.data.connections[p.id]?.imageModel || "",
           hasKey: !!this.key(p.id),
           remembered: !!this.data.connections[p.id]?.key,
         },
@@ -122,6 +123,12 @@ export class Store {
     const next = structuredClone(this.data),
       old = next.connections[id] || {};
     const model = body.model ? modelId(body.model) : "";
+    const imageModel =
+      body.imageModel === undefined
+        ? old.imageModel || ""
+        : body.imageModel
+          ? modelId(body.imageModel)
+          : "";
     const key = text(body.key ?? "", "API key", 4096).trim();
     if (/[\s\x00-\x1f\x7f]/.test(key))
       throw new AppError("API keys cannot contain whitespace.");
@@ -130,6 +137,7 @@ export class Store {
     const effective = key || this.key(id);
     next.connections[id] = {
       model,
+      imageModel,
       ...(body.remember && effective ? { key: effective } : {}),
     };
     this.commit(next);

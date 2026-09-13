@@ -1,12 +1,30 @@
 # Prism — model comparison studio
 
-**Version 0.3.2 · searchable sessions · 14 September 2026**
+**Version 0.4.0 · text, images and output files · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
 
-## New: find saved comparisons
+## New: answers with files
+
+Prism now keeps attachments with each answer. Inspect images and code, run
+single-file HTML apps in an isolated preview, download any file type, and keep
+source files beside combined drafts and their saved revisions. **Export files
+ZIP** saves the originals together. Files downloaded from a model's chat website
+can be added with **Attach outputs** in the full browser app.
+
+Open [the HTML demo](demo/Prism-demo.html), compare the samples, inspect
+**tiny-counter.html → Run preview**, and try the app. No setup or compilation.
+The full standalone/browser app also needs no dependency installation.
+
+This is a first mixed-output version: documents and multi-file app ZIPs download
+without running; provider-specific generation tools and remote file retrieval
+are not enabled automatically. Synthesis combines text and retains files; it
+receives file metadata, not image/file contents. Files are limited to 4 MB each.
+See [supported outputs, limits and verification](docs/OUTPUTS.md).
+
+## Find saved comparisons
 
 Use **Find a comparison** to search saved session titles, with accent-insensitive
 matching and Demo/Live filters. **Ctrl+K** (or **⌘K**) focuses search. Search does

@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><title>Prism isolated preview</title>
+<script>
+// This document has a separate, sandboxed CSP header. It receives only the
+// chosen file, never session tokens, cookies, provider keys or workspace data.
+addEventListener('message', function receive(event) {
+  if (event.source !== parent || event.data?.type !== 'prism-preview' || typeof event.data.html !== 'string') return;
+  removeEventListener('message', receive);
+  document.open(); document.write(event.data.html); document.close();
+});
+</script>

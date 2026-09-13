@@ -1,3 +1,6 @@
+import { fileArtifact, addArtifacts, addProviderArtifacts, presentRun, UPLOAD_BYTES, PREVIEW_CSP } from './artifacts.mjs';
+import { zipFiles } from './zip.mjs';
+import { sampleFiles } from '../public/artifact-samples.js';
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
@@ -24,6 +27,9 @@ import { ask, listModels } from "./providers.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const assets = new Map([
+  ["/artifacts.js", ["artifacts.js", "text/javascript; charset=utf-8"]],
+  ["/artifacts.css", ["artifacts.css", "text/css; charset=utf-8"]],
+  ["/artifact-preview.html", ["artifact-preview.html", "text/html; charset=utf-8"]],
   ["/", ["index.html", "text/html; charset=utf-8"]],
   ["/app.js", ["app.js", "text/javascript; charset=utf-8"]],
   ["/session-search.js", ["session-search.js", "text/javascript; charset=utf-8"]],
@@ -35,12 +41,12 @@ function reply(res, status, value, type = "application/json; charset=utf-8") {
   res.writeHead(status, { "Content-Type": type, "Cache-Control": "no-store" });
   res.end(type.startsWith("application/json") ? JSON.stringify(value) : value);
 }
-async function body(req) {
+async function body(req, limit = 800000) {
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 800000) throw new AppError("Request is too large.", 413);
+    if (size > limit) throw new AppError("Request is too large.", 413);
     chunks.push(chunk);
   }
   try {
@@ -69,7 +75,7 @@ export function createApp({
     res.setHeader("Referrer-Policy", "no-referrer");
     res.setHeader(
       "Content-Security-Policy",
-      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src blob:; frame-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
     );
     try {
       const port = server.address()?.port;
@@ -84,6 +90,7 @@ export function createApp({
       const path = new URL(req.url, "http://127.0.0.1").pathname;
       if (!path.startsWith("/api/")) {
         const asset = assets.get(path);
+        if (path === '/artifact-preview.html') res.setHeader('Content-Security-Policy', PREVIEW_CSP);
         if (!asset || req.method !== "GET")
           throw new AppError("Not found.", 404);
         return reply(
@@ -113,7 +120,7 @@ export function createApp({
         return reply(res, 200, {
           providers: PROVIDERS,
           connections: store.connections(),
-          version: "0.2.0",
+          version: "0.4.0",
         });
       const connectionMatch = path.match(
         /^\/api\/connections\/(openai|gemini|grok|claude)$/,
@@ -147,8 +154,33 @@ export function createApp({
           return reply(res, 200, { runs: store.list() });
         if (req.method === "POST")
           return reply(res, 201, {
-            run: store.add(makeRun(await body(req), store.connections())),
+            run: presentRun(store.add(makeRun(await body(req), store.connections()))),
           });
+      }
+      const fileMatch = path.match(/^\/api\/runs\/([a-f0-9-]{36})\/artifacts(?:\/([a-f0-9-]{36}))?$/);
+      if (fileMatch) {
+        const [, runId, fileId] = fileMatch;
+        if (req.method === 'GET' && fileId) {
+          const artifact = store.get(runId).artifacts?.find(f => f.id === fileId);
+          if (!artifact) throw new AppError('File not found.', 404);
+          return reply(res, 200, { artifact });
+        }
+        if (req.method === 'POST' && !fileId) {
+          const request = await body(req, UPLOAD_BYTES);
+          if (!Array.isArray(request.files) || !request.files.length || request.files.length > 8) throw new AppError('Attach 1–8 files at a time.');
+          const files = request.files.map(f => fileArtifact(f));
+          const updated = store.update(runId, current => {
+            const answer = current.responses.find(r => r.provider === request.provider);
+            if (!answer || answer.status !== 'complete') throw new AppError('Attach files to a completed answer.');
+            if (active.has(runId + ':combine')) throw new AppError('Wait for synthesis before changing its sources.', 409);
+            if (request.version !== (answer.fileVersion || 0)) throw new AppError('Files changed in another tab. Reload before attaching.', 409);
+            answer.artifactIds = [...(answer.artifactIds || []), ...addArtifacts(current, files, { provider: answer.provider, model: answer.model, label: answer.label })];
+            answer.fileVersion = (answer.fileVersion || 0) + 1;
+            answer.scores = { accuracy: null, usefulness: null, clarity: null }; answer.selected = false; answer.reviewVersion++;
+          });
+          return reply(res, 201, { run: presentRun(updated) });
+        }
+        throw new AppError('Not found.', 404);
       }
       const match = path.match(
         /^\/api\/runs\/([a-f0-9-]{36})(?:\/(answer|review|stop|combine|combined|export))?$/,
@@ -156,11 +188,16 @@ export function createApp({
       if (!match) throw new AppError("Not found.", 404);
       const [, id, action] = match,
         run = store.get(id);
-      if (!action && req.method === "GET") return reply(res, 200, { run });
+      if (!action && req.method === "GET") return reply(res, 200, { run: presentRun(run) });
       if (action === "export" && req.method === "GET") {
         const format = new URL(req.url, "http://127.0.0.1").searchParams.get(
           "format",
         );
+        if (format === 'zip') {
+          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.4.0', run: presentRun(run) }, null, 2)]];
+          for (const file of run.artifacts || []) if (file.encoding === 'base64') entries.push(['files/' + file.id + '/' + file.name, Buffer.from(file.data, 'base64')]);
+          return reply(res, 200, zipFiles(entries), 'application/zip');
+        }
         if (format === "md")
           return reply(
             res,
@@ -168,7 +205,7 @@ export function createApp({
             exportMarkdown(run),
             "text/markdown; charset=utf-8",
           );
-        return reply(res, 200, { application: "Prism", version: "0.1.0", run });
+        return reply(res, 200, { application: "Prism", version: "0.4.0", run });
       }
       if (action === "stop" && req.method === "POST") {
         for (const [key, controller] of active)
@@ -179,14 +216,14 @@ export function createApp({
         const patch = await body(req);
         provider(patch.provider);
         return reply(res, 200, {
-          run: store.update(id, (current) => {
+          run: presentRun(store.update(id, (current) => {
             const answer = current.responses.find(
               (r) => r.provider === patch.provider,
             );
             if (!answer || answer.status !== "complete")
               throw new AppError("This answer is not complete.");
             updateReview(answer, patch);
-          }),
+          })),
         });
       }
       if (action === "combined" && req.method === "PATCH") {
@@ -197,7 +234,7 @@ export function createApp({
             409,
           );
         return reply(res, 200, {
-          run: store.update(id, (current) => {
+          run: presentRun(store.update(id, (current) => {
             if (patch.version !== current.combined.version)
               throw new AppError(
                 "The combined answer changed in another tab. Copy your draft before reloading.",
@@ -212,7 +249,7 @@ export function createApp({
                 method: current.combined.method || "Manual draft",
               });
             }
-          }),
+          })),
         });
       }
       if (
@@ -259,17 +296,18 @@ export function createApp({
             throw new AppError("A combination is already in progress.", 409);
           if (request.method === "compile") {
             return reply(res, 200, {
-              run: store.update(id, (current) => {
+              run: presentRun(store.update(id, (current) => {
                 replaceDraft(current, {
                   text: compilation(run, answers),
                   method: "Editable compilation",
                   provider: null,
                   model: null,
                   sources: answers.map((r) => r.label),
+                  artifactIds: [...new Set(answers.flatMap(r => r.artifactIds || []))],
                   instructions: direction,
                   version: current.combined.version + 1,
                 });
-              }),
+              })),
             });
           }
           provider(request.provider);
@@ -324,6 +362,7 @@ export function createApp({
                       .map((r) => "## Source [" + r.label + "]\n\n" + r.text)
                       .join("\n\n") +
                     "\n\n## Review before using\n\nCheck disagreements and verify important claims. No provider was called.",
+              artifacts: action === 'answer' ? sampleFiles(outputProvider).map(f => fileArtifact(f, 'demo')) : [],
               warning: "",
               inputTokens: null,
               outputTokens: null,
@@ -346,7 +385,9 @@ export function createApp({
               const r = current.responses.find(
                 (r) => r.provider === outputProvider,
               );
-              Object.assign(r, answer, {
+              const { artifacts = [], ...content } = answer;
+              const saved = addProviderArtifacts(current, artifacts, { provider: outputProvider, model: outputModel, label: r.label });
+              Object.assign(r, content, { artifactIds: saved.ids, warning: [content.warning, saved.warning].filter(Boolean).join(" "),
                 status: "complete",
                 elapsedMs: Math.round(performance.now() - started),
               });
@@ -356,8 +397,12 @@ export function createApp({
                   "The combined answer changed while generation was running.",
                   409,
                 );
+              const { artifacts = [], ...content } = answer;
+              const generated = addProviderArtifacts(current, artifacts, { provider: outputProvider, model: outputModel, label: 'Combined' });
               replaceDraft(current, {
-                ...answer,
+                ...content,
+                warning: [content.warning, generated.warning].filter(Boolean).join(' '),
+                artifactIds: [...new Set([...answers.flatMap(r => r.artifactIds || []), ...generated.ids])],
                 method:
                   run.mode === "demo"
                     ? "Demo compilation (no AI call)"
@@ -375,7 +420,7 @@ export function createApp({
               });
             }
           });
-          return reply(res, 200, { run: updated });
+          return reply(res, 200, { run: presentRun(updated) });
         } catch (e) {
           const message = signal.aborted
             ? "Request stopped or timed out. The provider may already have used API credits. No automatic retry."
@@ -390,7 +435,7 @@ export function createApp({
               r.status = "error";
               r.error = message;
             });
-            return reply(res, 200, { run: updated });
+            return reply(res, 200, { run: presentRun(updated) });
           }
           throw new AppError(message, e.status || 502);
         } finally {
@@ -436,7 +481,7 @@ if (
     process.exitCode = 1;
   });
   app.server.listen(port, "127.0.0.1", () => {
-    console.log("Prism 0.1.0 — local model comparison studio");
+    console.log("Prism 0.4.0 — local model comparison studio");
     console.log("Open: http://127.0.0.1:" + port + "/#key=" + app.token);
     console.log("Keep this terminal open. Press Ctrl+C to stop.");
   });

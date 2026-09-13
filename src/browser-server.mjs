@@ -1,3 +1,4 @@
+import { UPLOAD_BYTES, PREVIEW_CSP } from './artifacts.mjs';
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +14,7 @@ const publicAssets = new Map([
   ['/browser-login.css', ['browser-login.css', 'text/css; charset=utf-8']],
   ['/logo.svg', ['logo.svg', 'image/svg+xml']],
 ]);
-const csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
+const csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src blob:; frame-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'";
 async function readBody(req, limit) {
   let size = 0; const chunks = [];
   for await (const chunk of req) {
@@ -89,7 +90,7 @@ export async function createBrowserApp({ directory, env = process.env, fetcher, 
         if (path === '/' && req.method === 'GET') { res.setHeader('Location', '/signin'); return end(303, 'Sign in', 'text/plain'); }
         return end(401, { error: 'Your session ended. Keep a copy of unsaved text, then reload and sign in again.' });
       }
-      const data = mutation ? await readBody(req, 800000) : undefined;
+      const data = mutation ? await readBody(req, /^\/api\/runs\/[a-f0-9-]{36}\/artifacts$/.test(path) ? UPLOAD_BYTES : 800000) : undefined;
       if (!liveEnabled) {
         const match = path.match(/^\/api\/runs\/([a-f0-9-]{36})\/(answer|combine)$/);
         const liveRun = match && backend.store.get(match[1]).mode === 'live';
@@ -107,7 +108,11 @@ export async function createBrowserApp({ directory, env = process.env, fetcher, 
           ...(data === undefined ? {} : { body: JSON.stringify(data) }), signal: controller.signal });
         if (path === '/api/config' && response.ok) {
           const config = await response.json();
-          return end(200, { ...config, browserSession: true, liveEnabled, version: '0.3.1' });
+          return end(200, { ...config, browserSession: true, liveEnabled, version: config.version });
+        }
+        if (path === '/artifact-preview.html') {
+          res.setHeader('Content-Security-Policy', PREVIEW_CSP);
+          res.setHeader('X-Frame-Options', 'SAMEORIGIN');
         }
         return end(response.status, Buffer.from(await response.arrayBuffer()), response.headers.get('content-type') || 'application/octet-stream');
       } finally { pending.delete(controller); res.off('close', abort); }

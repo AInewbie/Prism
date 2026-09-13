@@ -73,7 +73,7 @@
         const edit=reviews[r.provider], shown=edit || r;
         const overall=['accuracy','usefulness','clarity'].every(k=>Number.isInteger(r.scores[k]))?(Object.values(r.scores).reduce((a,b)=>a+b,0)/3).toFixed(1)+'/5':'Unscored';
         return '<article class="answer" data-answer="'+r.provider+'"><div class="answer-head"><div><h3>Answer '+r.label+'</h3><span class="quiet">'+($('blind').checked?'Identity hidden':esc(state.providers.find(p=>p.id===r.provider).name)+' · '+esc(r.model))+'</span></div><span class="badge">'+overall+'</span></div>'+
-          '<pre class="answer-text" id="text-'+r.provider+'">'+esc(r.text || r.error || (r.status==='pending'?'Waiting…':'Generating…'))+'</pre>'+
+          '<pre class="answer-text" id="text-'+r.provider+'">'+esc(r.text || r.error || (r.status==='complete'?'Files received (no text)':r.status==='pending'?'Waiting…':'Generating…'))+'</pre>'+((r.artifactIds||[]).length?'<p class="quiet">'+r.artifactIds.length+' output file(s) preserved. Open the Prism browser app to inspect or download files.</p>':'')+
           (r.warning?'<p class="quiet">'+esc(r.warning)+'</p>':'')+
           (r.status!=='complete'?'':'<div class="scores">'+['accuracy','usefulness','clarity'].map(k=>'<label>'+k[0].toUpperCase()+k.slice(1)+'<select id="score-'+r.provider+'-'+k+'" data-score="'+k+'"><option value="">—</option>'+[1,2,3,4,5].map(n=>'<option '+(shown.scores[k]===n?'selected':'')+'>'+n+'</option>').join('')+'</select></label>').join('')+'</div><label>Review notes<textarea id="notes-'+r.provider+'" data-notes rows="2" maxlength="8000">'+esc(shown.notes)+'</textarea></label><label class="check"><input type="checkbox" data-selected '+(shown.selected?'checked':'')+'>Use in combined answer</label><div class="row"><span class="review-status">'+(edit?'Unsaved review':'Saved review')+'</span><button data-review-save="'+r.provider+'">Save review</button></div>')+'</article>';
       }).join('');
@@ -98,7 +98,7 @@
     const run=state.run, selected=run.responses.filter(r=>r.selected && r.status==='complete');
     $('selection').textContent=selected.length+' sources selected';
     $('payload').textContent=JSON.stringify({originalPrompt:run.prompt,sharedInstructions:run.instructions,direction:$('direction').value,
-      selectedAnswers:selected.map(r=>({label:r.label,answer:r.text,scores:r.scores,notes:r.notes}))},null,2);
+      selectedAnswers:selected.map(r=>({label:r.label,answer:r.text,files:(state.run.artifacts||[]).filter(f=>(r.artifactIds||[]).includes(f.id)).map(f=>({name:f.name,mimeType:f.mimeType,size:f.size,contentsIncluded:false})),scores:r.scores,notes:r.notes}))},null,2);
   }
   function previewRevision(){ $('revision-preview').value=state?.run?.combinedHistory?.find(r=>r.historyId===$('revisions').value)?.text || ''; }
   async function action(fn) {
@@ -141,7 +141,7 @@
   $('refresh').onclick=()=>action(async()=>{await tool(state?.run?'prism_get':'prism_open',state?.run?{run_id:state.run.id}:{});notice(dirty()?'Latest saved state loaded; your unsaved edits remain.':'Refreshed.');});
   $('stop').onclick=async()=>{try{await tool('prism_stop',{run_id:state.run.id});notice('Stop requested. Paid requests may already have used credits.');}catch(e){notice(e.message,true);}};
   $('model-settings').onclick=(e)=>{const id=e.target.dataset.model;if(id) action(async()=>{if(dirty())throw Error('Save edits before changing models.');const runId=state?.run?.id;await tool('prism_set_model',{provider:id,model:$('model-'+id).value});if(runId)await tool('prism_get',{run_id:runId});notice('Model ID saved.');});};
-  $('export').onclick=()=>{if(dirty())return notice('Save edits before export.',true);const blob=new Blob([JSON.stringify({application:'Prism',version:'0.3.0',run:state.run},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='prism-'+state.run.id.slice(0,8)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);notice('Export requested. If your host blocks downloads, use the standalone app to export.');};
+  $('export').onclick=()=>{if(dirty())return notice('Save edits before export.',true);const blob=new Blob([JSON.stringify({application:'Prism',version:'0.4.0',fileBytesIncluded:false,run:state.run},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='prism-'+state.run.id.slice(0,8)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);notice((state.run.artifacts||[]).length?'Export includes text and file metadata only. Export actual file bytes from the browser app.':'Export requested. If your host blocks downloads, use the standalone app to export.');};
   window.addEventListener('beforeunload',event=>{if(dirty()){event.preventDefault();event.returnValue='';}});
   setInterval(async()=>{if(!ready || busy || !state?.busy || !state.run)return;try{await tool('prism_get',{run_id:state.run.id});}catch(e){notice(e.message,true);}},1200);
   (async()=>{try{await rpc('ui/initialize',{appInfo:{name:'Prism',version:'0.3.0'},appCapabilities:{},protocolVersion:'2026-01-26'});

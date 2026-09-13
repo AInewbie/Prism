@@ -21,6 +21,19 @@ for (const width of [1440, 412]) {
     await page.goto(file);
     await page.getByRole('button', { name: /Compare sample answers/ }).click();
     assert.equal(await page.locator('.card').count(), 4);
+    assert.equal(await page.locator('#answers .output-item').count(), 4);
+    await page.getByRole('button', { name: 'Inspect tiny-counter.html', exact: true }).click();
+    const viewer = page.getByRole('dialog', { name: 'Inspect output' });
+    await viewer.getByRole('button', { name: 'Run preview', exact: true }).click();
+    const frame = page.frameLocator('.output-preview iframe');
+    await frame.getByRole('button', { name: 'Add one' }).click();
+    assert.equal(await frame.locator('#count').innerText(), '1');
+    await page.screenshot({ path: resolve(output, width + '-offline-app.png'), fullPage: true });
+    await viewer.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('button', { name: 'Inspect comparison-map.svg', exact: true }).click();
+    await viewer.locator('img').evaluate(img => img.decode());
+    await viewer.getByRole('button', { name: 'Close', exact: true }).click();
+
     const first = page.locator('.card').first();
     await first.getByRole('button', { name: /accuracy 4/i }).click();
     await first.getByRole('button', { name: /usefulness 5/i }).click();
@@ -30,6 +43,7 @@ for (const width of [1440, 412]) {
     await page.getByRole('button', { name: 'Combined answer', exact: true }).click();
     await page.getByRole('button', { name: /Assemble editable draft/ }).click();
     assert.match(await page.locator('#draft').inputValue(), /Combined working draft/);
+    assert.equal(await page.locator('#combined .output-item').count(), 2);
     await page.locator('#draft').fill('My saved combined answer.');
     await page.getByRole('button', { name: 'Save draft' }).click();
     const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'Export JSON' }).click(); await download;
@@ -54,7 +68,7 @@ for (const width of [1440, 412]) {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: resolve(output, width + '-combined.png'), fullPage: true });
     assert.deepEqual(errors, []);
-    assert.ok(requests.every(url => url.startsWith('file:')));
-    console.log(width + 'px offline demo: compare, score, combine, save, export, reload and searchable history passed with no network requests.');
+    assert.ok(requests.every(url => url.startsWith('file:') || url.startsWith('blob:') || url.startsWith('data:')));
+    console.log(width + 'px offline demo: compare, score, combine, save, export, reload, searchable history, image and interactive app previews passed with no network requests.');
   } finally { await context.close(); await rm(profile, { recursive: true, force: true }); }
 }

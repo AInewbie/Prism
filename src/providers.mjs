@@ -1,3 +1,4 @@
+import { providerArtifacts } from './artifacts.mjs';
 import { AppError, provider, modelId } from "./core.mjs";
 const bases = {
   openai: "https://api.openai.com/v1",
@@ -15,7 +16,7 @@ function headers(id, key) {
         : { Authorization: "Bearer " + key }),
   };
 }
-async function jsonRequest(url, init, fetcher) {
+async function jsonRequest(url, init, fetcher, limit = 2_000_000) {
   let response;
   try {
     response = await fetcher(url, { ...init, redirect: "error" });
@@ -46,7 +47,7 @@ async function jsonRequest(url, init, fetcher) {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.length;
-      if (size > 2_000_000) {
+      if (size > limit) {
         await reader.cancel();
         throw Error();
       }
@@ -146,14 +147,15 @@ export function parseAnswer(id, data) {
     if (data.stop_reason === "max_tokens")
       warning = "Output limit reached. This answer may be incomplete.";
   }
-  if (typeof text !== "string" || !text.trim())
+  const rich = providerArtifacts(id, data, text);
+  if (typeof text !== "string" || (!text.trim() && !rich.artifacts.length))
     throw new AppError(
-      "No visible text returned. The prompt may be blocked, or reasoning may have used the output limit.",
+      "No supported visible output returned. The prompt may be blocked, or reasoning may have used the output limit.",
       502,
     );
   if (text.length > 120000)
     throw new AppError("Answer too large. Ask for a shorter response.", 502);
-  return { text, warning, inputTokens, outputTokens };
+  return { text, artifacts: rich.artifacts, warning: [warning, rich.warning].filter(Boolean).join(" "), inputTokens, outputTokens };
 }
 export async function ask(
   id,
@@ -166,7 +168,7 @@ export async function ask(
   fetcher = fetch,
 ) {
   const { url, init } = requestSpec(id, key, model, system, prompt, maxTokens);
-  return parseAnswer(id, await jsonRequest(url, { ...init, signal }, fetcher));
+  return parseAnswer(id, await jsonRequest(url, { ...init, signal }, fetcher, 18_000_000));
 }
 export async function listModels(id, key, signal, fetcher = fetch) {
   provider(id);

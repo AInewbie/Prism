@@ -105,8 +105,11 @@ runtime itself uses only Node built-ins. Browser-access tests cover signed-out
 data denial, sign-in, cookie flags, logout revocation, origin/Host checks, forged
 tokens, duplicate cookies, expiry, bounded attempts, restart reauthentication,
 live-disabled gates and enabled generation/synthesis through a fake provider.
-The HTTPS-cookie test simulates proxy headers; it is not a real TLS test.
-The release passed 27 automated tests and syntax checks. Browser sign-in and
+The original HTTPS-cookie test simulates proxy headers. The follow-up
+[HTTPS verification](HTTPS_VERIFICATION.md) adds a real encrypted loopback proxy
+and browser checks; it is still not an actual hosted deployment. Running the
+test suite now also requires the OpenSSL CLI to generate disposable certificates.
+The original release passed 27 automated tests and syntax checks. Browser sign-in and
 the existing comparison workflow passed at 1600×1050 and 412×1050 touch, including
 sign-out/re-entry, saved drafts, history restoration, exports and credential
 exclusion from browser storage. Screenshots were visually inspected. The supplied

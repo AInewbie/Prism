@@ -1,5 +1,12 @@
 # Changelog
 
+## HTTPS verification checkpoint — 13 September 2026
+
+- Add an isolated, disposable TLS proxy fixture and authenticated transport test,
+  plus `npm run test:browser:https` for the existing desktop/phone workflow.
+- Document test-only certificate trust and the remaining real-hosting limits.
+  No runtime behavior, version, production deployment or account access changes.
+
 ## Repository publication — 13 September 2026
 
 - Set the owner-supplied AInewbie/Prism repository as the source destination and

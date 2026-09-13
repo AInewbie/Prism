@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { createApp } from "../src/server.mjs";
 import { createBrowserApp } from "../src/browser-server.mjs";
+import { createHttpsBrowserFixture } from "./helpers/https-proxy.mjs";
 
 const playwright = await import(
   process.env.PRISM_PLAYWRIGHT_MODULE || "playwright"
@@ -13,18 +14,21 @@ const directory = await mkdtemp(resolve(tmpdir(), "prism-browser-"));
 const output = resolve(process.env.PRISM_BROWSER_OUTPUT || "work/browser");
 await mkdir(output, { recursive: true });
 let providerCalls = 0;
-const browserAccess = process.env.PRISM_TEST_BROWSER_GATEWAY === "1";
+const httpsAccess = process.argv.includes('--https') || process.env.PRISM_TEST_BROWSER_HTTPS === "1";
+const browserAccess = httpsAccess || process.env.PRISM_TEST_BROWSER_GATEWAY === "1";
 const password = "synthetic-browser-test-passphrase";
-const app = await (browserAccess ? createBrowserApp : createApp)({
+const appOptions = {
   directory,
   env: browserAccess ? { PRISM_BROWSER_PASSWORD: password } : {},
   fetcher: async () => {
     providerCalls++;
     throw Error("No real provider calls allowed in browser test.");
   },
-});
-await new Promise((done) => app.server.listen(0, "127.0.0.1", done));
-const url =
+};
+const tlsFixture = httpsAccess ? await createHttpsBrowserFixture(appOptions) : null;
+const app = tlsFixture?.app || await (browserAccess ? createBrowserApp : createApp)(appOptions);
+if (!tlsFixture) await new Promise((done) => app.server.listen(0, "127.0.0.1", done));
+const url = tlsFixture?.url ||
   "http://127.0.0.1:" + app.server.address().port + (browserAccess ? "/" : "/#key=" + app.token);
 const launchOptions = {
   headless: true,
@@ -35,6 +39,8 @@ const launchOptions = {
     ? JSON.parse(process.env.PRISM_BROWSER_ARGS)
     : ["--no-sandbox", "--disable-dev-shm-usage"],
 };
+// Trust only the disposable fixture key, never all HTTPS certificates.
+if (tlsFixture) launchOptions.args.push('--ignore-certificate-errors-spki-list=' + tlsFixture.spki);
 let browser = await chromium.launch(launchOptions);
 try {
   for (const width of [1600, 412]) {
@@ -63,6 +69,12 @@ try {
       await page.locator('#submit').click();
       const loginResponse = await signedIn;
       assert.equal(loginResponse.status(), 200);
+      if (httpsAccess) {
+        assert.equal(new URL(page.url()).protocol, 'https:');
+        const cookie = (await context.cookies()).find(c => c.name === '__Host-prism-browser');
+        assert.ok(cookie); assert.equal(cookie.secure, true);
+        assert.equal(cookie.httpOnly, true); assert.equal(cookie.sameSite, 'Strict');
+      }
     }
     await page.locator("#provider-picker .provider-chip").first().waitFor({ state: 'attached' }).catch(async error => {
       console.error('Initial page state:', page.url(), (await page.locator('body').innerText()).slice(0,1800), errors, (await context.cookies()).map(c => ({name:c.name,domain:c.domain,secure:c.secure,sameSite:c.sameSite})));
@@ -286,7 +298,7 @@ try {
       assert.equal(await page.evaluate(() => sessionStorage.getItem('prism-session')), null);
       await page.locator('#sign-out').click();
       await page.locator('#password').waitFor();
-      assert.equal((await page.request.get(new URL('/api/config', url).href)).status(), 401);
+      assert.equal(await page.evaluate(async () => (await fetch('/api/config')).status), 401);
       await page.locator('#password').fill(password);
       await page.locator('#submit').click();
       await page.locator('#session').waitFor({ state: 'visible' });
@@ -302,6 +314,6 @@ try {
   assert.equal(providerCalls, 0);
 } finally {
   await browser.close();
-  await app.close();
+  if (tlsFixture) await tlsFixture.close(); else await app.close();
   await rm(directory, { recursive: true, force: true });
 }

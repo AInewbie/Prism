@@ -15,7 +15,8 @@
     "test:plugin-browser": "node test/plugin-browser.mjs",
     "test": "node --test test/*.test.mjs",
     "check": "node --check src/server.mjs && node --check src/providers.mjs && node --check src/store.mjs && node --check src/core.mjs && node --check src/drafts.mjs && node --check src/browser-session.mjs && node --check src/browser-server.mjs && node --check public/browser-login.js && node --check public/app.js && node --check plugins/prism/backend.mjs && node --check plugins/prism/mcp.mjs && node --check plugins/prism/server.mjs && node --check plugins/prism/preview.mjs && node --check plugins/prism/widget.js",
-    "test:browser": "node test/browser.mjs"
+    "test:browser": "node test/browser.mjs",
+    "test:browser:https": "node test/browser.mjs --https"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",

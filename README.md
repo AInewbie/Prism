@@ -263,6 +263,10 @@ git -C ../prism-history switch builder/browser-sign-in
 
 ## Source repository
 
+The follow-up [local HTTPS verification](docs/HTTPS_VERIFICATION.md) exercises
+the browser sign-in and comparison workflow through an encrypted loopback proxy.
+Its OpenSSL/Playwright requirements apply only to testing, not normal app startup.
+
 The commissioned repository is [AInewbie/Prism](https://github.com/AInewbie/Prism).
 It contains the Prism 0.3.1 browser-access preview, the standalone app, the native
 ChatGPT plugin preview, tests, dependency lock and version history. This

@@ -1,3 +1,4 @@
+import { outputList, createOutputViewer, saveOutput } from "./artifacts.js";
 import { filterSessions } from "./session-search.js";
 
 const $ = (id) => document.getElementById(id);
@@ -27,6 +28,7 @@ const S = {
   combinedDraft: null,
   combineBusy: false,
   creating: false,
+  fileBusy: false,
   history: [],
 };
 let token = new URLSearchParams(location.hash.slice(1)).get("key");
@@ -41,7 +43,7 @@ const score = (r) =>
     : null;
 const name = (r) => (S.blind ? "Answer " + r.label : p(r.provider).name);
 const busy = () =>
-  S.creating || S.requests.size > 0 || S.combineBusy || S.savingReviews > 0;
+  S.creating || S.fileBusy || S.requests.size > 0 || S.combineBusy || S.savingReviews > 0;
 function toast(message, error = false) {
   $("toast").textContent = message;
   $("toast").className = error ? "error" : "";
@@ -239,6 +241,38 @@ function sortedResponses() {
     );
   return result;
 }
+const outputViewer = createOutputViewer();
+const runFiles = (owner) => (S.run.artifacts || []).filter(file => (owner.artifactIds || []).includes(file.id));
+async function openOutput(id, download = false) {
+  const runId = S.run.id;
+  try {
+    const { artifact } = await api('/runs/' + runId + '/artifacts/' + id);
+    if (S.run.id !== runId) return;
+    if (artifact.encoding !== 'base64') return toast('Attach a downloaded copy of this provider file.');
+    if (download) saveOutput(artifact);
+    else outputViewer.open(artifact, S.blind ? 'Output file · identity hidden' : artifact.name);
+  } catch (error) { toast(error.message, true); }
+}
+async function attachOutputs(input) {
+  const files = [...input.files], runId = S.run.id, provider = input.dataset.attach;
+  if (!files.length || busy()) return;
+  if (files.length > 8 || files.some(f => f.size > 4000000) || files.reduce((n, f) => n + f.size, 0) > 4000000) {
+    input.value = ''; return toast('Attach up to 8 files, totalling at most 4 MB per upload.', true);
+  }
+  S.fileBusy = true;
+  try {
+    const version = S.run.responses.find(r => r.provider === provider).fileVersion || 0;
+    const encoded = await Promise.all(files.map(file => new Promise((resolve, reject) => {
+      const reader = new FileReader(); reader.onerror = () => reject(Error('Could not read file.'));
+      reader.onload = () => resolve({ name: file.name, mimeType: file.type, data: String(reader.result).split(',')[1] });
+      reader.readAsDataURL(file);
+    })));
+    const result = await api('/runs/' + runId + '/artifacts', { method: 'POST', data: { provider, version, files: encoded } });
+    if (S.run.id === runId) { acceptRun(result.run); renderSession(); }
+    toast('Files saved. Scores and selection reset so you can review the updated answer.');
+  } catch (error) { toast(error.message, true); }
+  finally { S.fileBusy = false; input.value = ''; renderSession(); }
+}
 function renderCards() {
   const rows = sortedResponses();
   $("answer-grid").className = "answer-grid count-" + rows.length;
@@ -295,6 +329,7 @@ function renderCards() {
         '">' +
         body +
         "</div>" +
+        (done ? outputList(runFiles(r), { blind: S.blind }) + '<label class="attach-outputs">Attach outputs<input type="file" multiple data-attach="' + r.provider + '" aria-label="Attach outputs to answer ' + r.label + '" ' + (busy() ? 'disabled' : '') + '><small>Files from this model’s response · up to 4 MB per upload</small></label>' : '') +
         (done
           ? '<div class="review-panel"><div class="review-label"><span>YOUR SCORE</span><span>' +
             criteria.filter((k) => r.scores[k] !== null).length +
@@ -404,6 +439,7 @@ function renderCombine() {
         "</small></label>",
     )
     .join("");
+  $("combined-files").innerHTML = outputList(runFiles(run.combined), { blind: S.blind });
   const prior = $("synth-provider").value;
   $("synth-provider").innerHTML = S.providers
     .map(
@@ -452,7 +488,7 @@ function renderCombine() {
       ? "Demo: combines the local samples without calling any provider."
       : "One API request to " +
         p($("synth-provider").value)?.name +
-        ". Sends the prompt, selected answers, scores and notes. API charges apply.";
+        ". Sends text, file names/types, scores and notes; file contents are not sent. Original files stay attached to the draft. API charges apply.";
   $("synthesis-preview").textContent = JSON.stringify(
     {
       originalPrompt: run.prompt,
@@ -461,6 +497,7 @@ function renderCombine() {
       selectedAnswers: selected.map((r) => ({
         label: r.label,
         answer: r.text,
+        files: runFiles(r).map(f => ({ name: f.name, mimeType: f.mimeType, size: f.size, contentsIncluded: false })),
         scores: r.scores,
         notes: r.notes,
       })),
@@ -486,6 +523,7 @@ function renderHistoryPreview() {
     (item) => item.historyId === $("history-select").value,
   );
   $("history-preview").value = draft?.text || "";
+  $("history-files").innerHTML = draft ? outputList(runFiles(draft), { blind: S.blind }) : "";
   $("history-meta").textContent = draft
     ? "Saved " + new Date(draft.savedAt).toLocaleString() +
       " · Sources " + (draft.sources.join(", ") || "manual")
@@ -532,6 +570,7 @@ function renderSession() {
     $("stop-button").hidden = !S.requests.size && !S.combineBusy;
     $("new-comparison").disabled = busy();
     $("export-json").disabled = busy();
+    $("export-zip").disabled = busy();
     $("export-md").disabled = busy();
     renderHistory();
   });
@@ -827,6 +866,9 @@ $("go-combine").onclick = () => {
   $("combined-view").scrollIntoView({ behavior: "smooth", block: "start" });
 };
 document.addEventListener("click", (event) => {
+  const opened = event.target.closest('[data-output-open]'), downloaded = event.target.closest('[data-output-download]');
+  if (opened) openOutput(opened.dataset.outputOpen);
+  if (downloaded) openOutput(downloaded.dataset.outputDownload, true);
   const rate = event.target.closest("[data-rate]"),
     retry = event.target.closest("[data-retry]"),
     copyButton = event.target.closest("[data-copy]");
@@ -848,6 +890,7 @@ document.addEventListener("click", (event) => {
 });
 document.addEventListener("change", (event) => {
   const { target } = event;
+  if (target.dataset.attach) attachOutputs(target);
   if (target.dataset.select)
     saveReview(target.dataset.select, { selected: target.checked });
   if (target.dataset.notes)
@@ -925,6 +968,7 @@ $("stop-button").onclick = async () => {
     toast(e.message, true);
   }
 };
+$("export-zip").onclick = () => exportRun("zip");
 $("export-json").onclick = () => exportRun("json");
 $("export-md").onclick = () => exportRun("md");
 $("connections-button").onclick = openConnections;

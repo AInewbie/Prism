@@ -6,6 +6,7 @@
   <title>Prism · Model comparison studio</title>
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/artifacts.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -55,7 +56,7 @@
           <div class="workflow-step"><span>03</span><div><h3>Make it yours</h3><p>Combine selected answers into an editable draft.</p></div></div>
         </section>
         <section id="session" hidden>
-          <div class="session-heading"><div><div class="eyebrow">YOUR COMPARISON</div><h2 id="session-title">The comparison</h2></div><div class="session-actions"><button class="button danger" id="stop-button" hidden>Stop requests</button><button class="button" id="export-json">Export JSON</button><button class="button" id="export-md">Export Markdown ↗</button></div></div>
+          <div class="session-heading"><div><div class="eyebrow">YOUR COMPARISON</div><h2 id="session-title">The comparison</h2></div><div class="session-actions"><button class="button danger" id="stop-button" hidden>Stop requests</button><button class="button" id="export-zip" type="button">Export files ZIP</button><button class="button" id="export-json">Export JSON</button><button class="button" id="export-md">Export Markdown ↗</button></div></div>
           <div class="saved-prompt"><span class="small-label">PROMPT</span><p id="saved-prompt-text"></p><details id="saved-instructions"><summary>Shared instructions</summary><p></p></details></div>
           <div class="review-toolbar"><div class="view-tabs" role="tablist" aria-label="Comparison views"><button role="tab" aria-selected="true" data-view="answers">Answers <span id="answer-count"></span></button><button role="tab" aria-selected="false" data-view="scorecard">Scorecard</button><button role="tab" aria-selected="false" data-view="combined">Combined answer</button></div><div class="review-options"><label class="check-label"><input id="blind" type="checkbox"> Blind review</label><label class="sr-only" for="sort">Sort answers</label><select id="sort"><option value="original">Original order</option><option value="score">Highest scored</option><option value="speed">Fastest</option></select></div></div>
           <p id="session-note" class="session-note"></p>
@@ -64,14 +65,14 @@
           <section id="combined-view" aria-label="Combine answers" hidden>
             <div class="combine-layout">
               <section class="combine-controls"><div class="eyebrow">BUILD YOUR BEST ANSWER</div><h3>Better, together.</h3><p>Choose the answers to draw from. Your scores and notes help guide a synthesis.</p><div id="combine-sources"></div><label class="field">Direction for the combined answer<textarea id="combine-direction" rows="3" maxlength="8000" placeholder="Keep the actionable steps, resolve overlap, and flag disagreements."></textarea></label><button class="button" id="compile-button">Assemble editable draft <span>↗</span></button><div class="or-divider">or ask a model to synthesize</div><label class="field">Synthesis model<select id="synth-provider"></select></label><button class="button primary" id="synthesize-button">Synthesize selected answers <span>✧</span></button><p class="quiet" id="synthesis-note"></p><details class="payload-preview"><summary>Preview what will be sent</summary><pre id="synthesis-preview"></pre></details></section>
-              <section class="combined-editor"><div class="editor-heading"><div><h3>Your combined answer</h3><small id="combined-meta">An editable space for the strongest ideas.</small></div><span class="save-state" id="combined-save-state">No draft yet</span></div><textarea id="combined-text" rows="20" maxlength="550000" aria-label="Combined answer draft" placeholder="Assemble or synthesize selected answers, then shape the result in your own words."></textarea><div class="editor-footer"><button class="button" id="copy-combined">Copy draft</button><button class="button primary" id="save-combined">Save draft</button></div></section>
+              <section class="combined-editor"><div class="editor-heading"><div><h3>Your combined answer</h3><small id="combined-meta">An editable space for the strongest ideas.</small></div><span class="save-state" id="combined-save-state">No draft yet</span></div><div id="combined-files"></div><textarea id="combined-text" rows="20" maxlength="550000" aria-label="Combined answer draft" placeholder="Assemble or synthesize selected answers, then shape the result in your own words."></textarea><div class="editor-footer"><button class="button" id="copy-combined">Copy draft</button><button class="button primary" id="save-combined">Save draft</button></div></section>
             </div>
             <details class="draft-history" id="draft-history">
               <summary>Draft history <span id="draft-revision-count">0 saved revisions</span></summary>
               <p class="quiet">Saved drafts are kept when you edit, assemble, synthesize or restore. Preview a revision before restoring it. Unsaved typing is not recorded.</p>
               <label class="field">Saved revision<select id="history-select"></select></label>
               <p id="history-meta" class="quiet"></p>
-              <textarea id="history-preview" rows="8" readonly aria-label="Saved revision preview"></textarea>
+              <div id="history-files"></div><textarea id="history-preview" rows="8" readonly aria-label="Saved revision preview"></textarea>
               <button id="restore-draft" class="button">Restore this revision</button>
               <p class="quiet">Restoring also keeps your current saved draft in history. Save unsaved edits first.</p>
             </details>

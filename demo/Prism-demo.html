@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob: data:; frame-src blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="color-scheme" content="light">
   <title>Prism · Offline interactive demo</title>
   <style>
@@ -11,6 +12,11 @@
     @media(max-width:850px){.shell{display:block}.side{height:auto;position:static;border-right:0;border-bottom:1px solid var(--line);padding:14px}.side .section-label,.history,.privacy{display:none}.side-top{display:flex;align-items:center;justify-content:space-between}.brand small{display:none}.badge{font-size:10px}.new{width:auto}.top{padding:0 14px;height:58px}.main{padding:30px 12px 70px}.hero h1{font-size:43px}.composer-bottom,.session-head,.toolbar{align-items:stretch;flex-direction:column}.launch{justify-content:space-between}.grid,.combine{grid-template-columns:1fr}.card{min-height:0}.answer{max-height:none}.actions .button{flex:1}.scorecard{font-size:12px}.scorecard th,.scorecard td{padding:8px 5px}.tools{justify-content:space-between}.footer{gap:12px}.top-actions .button:first-child{display:none}}
     .demo-sessions{min-width:0;min-height:0;display:flex;flex-direction:column;gap:9px}.demo-sessions label{display:flex;justify-content:space-between;gap:6px;font-size:12px;font-weight:750}.demo-sessions kbd{font:inherit;font-size:10px;color:var(--muted)}.search-row{display:flex;gap:6px}.search-row input{min-width:0;width:100%;min-height:42px;border:1px solid var(--line);border-radius:9px;padding:8px;background:white;font-size:13px}.search-row .button{min-height:42px;padding:8px}.demo-sessions p{margin:0;font-size:11px}.demo-sessions .history{max-height:45vh}.search-row input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     @media(max-width:720px){.side .demo-sessions{width:100%;display:flex}.demo-sessions kbd{display:none}.search-row input{font-size:16px;min-height:44px}.search-row .button{min-height:44px}.demo-sessions .history{display:grid;max-height:140px}.demo-sessions .history button{min-width:0;width:100%;min-height:54px}.demo-sessions .history strong{font-size:13px}.demo-sessions .history small{font-size:11px}}
+/* OUTPUT_STYLE_START */
+.output-list{padding:14px 16px;border-top:1px solid var(--line,#dce5d9);background:#f7faf4}.output-heading{display:flex;gap:8px;font-size:10px;letter-spacing:.12em;font-weight:800;color:#687c68;margin-bottom:10px}.output-heading span{letter-spacing:0}.output-item{display:flex;align-items:center;flex-wrap:wrap;gap:9px;border:1px solid #dce5d9;border-radius:10px;padding:10px;background:white;margin:7px 0}.output-kind{font-size:10px;padding:5px 7px;background:#eef4e8;border-radius:6px;color:#24563f;font-weight:800;white-space:nowrap}.output-description{flex:1;min-width:120px;overflow-wrap:anywhere}.output-description strong{display:block;font-size:13px}.output-description small{font-size:10px;color:#718175}.output-actions{display:flex;gap:6px;flex-wrap:wrap}.output-actions .button{padding:7px 9px;font-size:11px;min-height:36px}.attach-outputs{display:block;padding:10px 16px}.attach-outputs input{max-width:100%;font-size:12px}.attach-outputs small{display:block;color:#718175;font-size:11px;margin-top:5px}.output-dialog{width:min(1000px,94vw);max-height:92vh;padding:24px;border:1px solid #dce5d9;border-radius:16px;color:#183a2b;background:#fbfcf8}.output-dialog::backdrop{background:rgba(12,33,23,.55)}.output-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.output-dialog-head h2{font-size:23px;margin:0;overflow-wrap:anywhere}.output-dialog-head p{margin:6px 0 14px}.output-view-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.output-preview{min-width:0;overflow:auto}.output-preview pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:55vh;background:#eff3eb;padding:15px;border-radius:8px;font:12px/1.7 ui-monospace,monospace}.output-preview img{max-width:100%;max-height:60vh;display:block;margin:auto;border-radius:12px}.output-preview video{max-width:100%;max-height:60vh}.output-preview audio{max-width:100%;width:100%}.output-preview iframe{width:100%;height:55vh;background:white;border:1px solid #dce5d9;border-radius:10px}.output-preview-note{font-size:12px;background:#fff5d8;padding:10px;border-radius:8px}.output-list:empty{display:none}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:600px){.output-dialog{padding:15px}.output-actions .button{min-height:44px;font-size:12px}.output-view-actions .button{min-height:44px}.output-dialog-head .button{min-height:44px}.output-preview iframe{height:52vh}.output-description{min-width:150px}}
+
+/* OUTPUT_STYLE_END */
   </style>
 </head>
 <body>
@@ -24,7 +30,7 @@
     <div class="workspace">
       <header class="top"><div><span>Workspace /</span> <strong>Comparison studio</strong></div><div class="top-actions"><button class="button" id="clear">Clear demo data</button><span class="badge"><span class="dot"></span>SAMPLES ONLY</span></div></header>
       <main class="main">
-        <section class="hero" id="hero"><div class="eyebrow">MANY MODELS. YOUR JUDGMENT.</div><h1>One prompt.<br><em>More perspective.</em></h1><p>Compare sample approaches, score what matters, and assemble your own answer.</p></section>
+        <section class="hero" id="hero"><div class="eyebrow">MANY MODELS. YOUR JUDGMENT.</div><h1>One prompt.<br><em>More perspective.</em></h1><p>Compare text, images and working app samples. Score the complete output and keep its files with your answer.</p></section>
         <div class="notice" id="notice"><span>ⓘ</span><div><strong>This download is an interactive product demo.</strong><p>It never contacts ChatGPT, Gemini, Grok or Claude. The labels show how real provider answers would appear in the hosted app.</p></div></div>
         <form class="composer" id="composer"><textarea id="prompt" maxlength="30000" required aria-label="Prompt" placeholder="Give me a practical plan to turn an idea into a useful app. Compare the trade-offs and tell me what to test first."></textarea><div class="composer-bottom"><div class="providers" id="providers"></div><div class="launch"><small id="count">4 samples selected</small><button class="primary" type="submit">Compare sample answers ↗</button></div></div></form>
         <section class="session hidden" id="session">
@@ -35,7 +41,7 @@
           <div id="scorecard" class="hidden"></div>
           <div id="combined" class="hidden"></div>
         </section>
-        <div class="footer"><span>Different answers. A more considered decision.</span><span>Prism offline demo · 0.3.2</span></div>
+        <div class="footer"><span>Different answers. A more considered decision.</span><span>Prism offline demo · 0.4.0</span></div>
       </main>
     </div>
   </div>
@@ -43,6 +49,99 @@
   <script>
     (()=>{
       'use strict';
+/* OUTPUT_MODULE_START */
+const artifactEscape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function outputKind(file) {
+  if (file.encoding === 'reference') return 'Reference';
+  if (file.mimeType === 'text/html') return 'HTML / app';
+  if (/^image\//.test(file.mimeType)) return 'Image';
+  if (/^audio\//.test(file.mimeType)) return 'Audio';
+  if (/^video\//.test(file.mimeType)) return 'Video';
+  if (/^(text\/|application\/(json|javascript|xml))/.test(file.mimeType)) return 'Text / code';
+  return 'Attachment';
+}
+function outputList(files, { blind = false } = {}) {
+  if (!files.length) return '';
+  return '<section class="output-list" aria-label="Output files"><div class="output-heading">OUTPUT FILES <span>' + files.length + '</span></div>' + files.map((file, i) => {
+    const kind = outputKind(file), title = blind ? 'File ' + (i + 1) : file.name;
+    return '<div class="output-item"><span class="output-kind">' + artifactEscape(kind) + '</span><div class="output-description"><strong>' + artifactEscape(title) + '</strong><small>' + artifactEscape(file.mimeType) + ' · ' + (file.size === null ? 'Not downloaded' : file.size < 1000 ? file.size + ' B' : (file.size / 1000).toFixed(1) + ' KB') + ' · ' + (file.origin === 'attached' ? 'Added by you' : file.origin === 'demo' ? 'Sample file' : file.origin === 'code-block' ? 'From answer code' : 'Provider output') + '</small></div><div class="output-actions">' + (kind !== 'Reference' ? '<button class="button" data-output-open="' + file.id + '">Inspect<span class="sr-only"> ' + artifactEscape(title) + '</span></button><button class="button" data-output-download="' + file.id + '">Download<span class="sr-only"> ' + artifactEscape(title) + '</span></button>' : '<span class="quiet">Attach the downloaded file</span>') + '</div></div>';
+  }).join('') + '</section>';
+}
+function outputBytes(file) {
+  const raw = atob(file.data);
+  return Uint8Array.from(raw, c => c.charCodeAt(0));
+}
+function saveOutput(file) {
+  const blob = new Blob([outputBytes(file)], { type: file.mimeType }), url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function createOutputViewer({ offline = false } = {}) {
+  const dialog = document.createElement('dialog'); dialog.className = 'output-dialog'; dialog.setAttribute('aria-label', 'Inspect output');
+  dialog.innerHTML = '<div class="output-dialog-head"><div><h2></h2><p class="quiet"></p></div><button class="button" data-close>Close</button></div><div class="output-view-actions"><button class="button" data-source>View source</button><button class="button" data-run>Run preview</button><button class="button" data-download>Download file</button></div><p class="output-preview-note" hidden>Isolated preview · External resources and server features are unavailable. Download to use the full file.</p><div class="output-preview"></div>';
+  document.body.append(dialog);
+  let file, urls = [], restoreFocus;
+  const body = dialog.querySelector('.output-preview'), note = dialog.querySelector('.output-preview-note');
+  const cleanup = () => { body.replaceChildren(); urls.forEach(url => URL.revokeObjectURL(url)); urls = []; };
+  const urlFor = (content, type) => { const url = URL.createObjectURL(new Blob([content], { type })); urls.push(url); return url; };
+  function source() {
+    cleanup(); note.hidden = true;
+    const pre = document.createElement('pre'); pre.textContent = new TextDecoder().decode(outputBytes(file)).slice(0, 200000);
+    body.append(pre);
+    if (file.size > 200000) { const notice = document.createElement('p'); notice.textContent = 'Source preview limited to 200,000 characters. Download for the complete file.'; body.prepend(notice); }
+  }
+  function preview() {
+    cleanup(); note.hidden = false;
+    const frame = document.createElement('iframe'); frame.title = 'Isolated app preview'; frame.setAttribute('sandbox', 'allow-scripts'); frame.referrerPolicy = 'no-referrer';
+    const html = new TextDecoder().decode(outputBytes(file));
+    if (offline) {
+      const csp = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+      frame.src = urlFor('<!doctype html><meta http-equiv="Content-Security-Policy" content="' + csp + '">' + html, 'text/html');
+    } else {
+      frame.src = '/artifact-preview.html';
+      frame.addEventListener('load', () => frame.contentWindow.postMessage({ type: 'prism-preview', html }, '*'), { once: true });
+    }
+    body.append(frame);
+  }
+  dialog.querySelector('[data-close]').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => { cleanup(); restoreFocus?.focus?.({ preventScroll: true }); });
+  dialog.querySelector('[data-source]').onclick = source;
+  dialog.querySelector('[data-run]').onclick = preview;
+  dialog.querySelector('[data-download]').onclick = () => saveOutput(file);
+  return { open(next, title = next.name) {
+    file = next; restoreFocus = document.activeElement; cleanup(); note.hidden = true;
+    dialog.querySelector('h2').textContent = title;
+    dialog.querySelector('.quiet').textContent = outputKind(file) + ' · ' + file.mimeType;
+    dialog.querySelector('[data-source]').hidden = !['HTML / app', 'Text / code'].includes(outputKind(file)) && file.mimeType !== 'image/svg+xml';
+    dialog.querySelector('[data-run]').hidden = file.mimeType !== 'text/html';
+    const kind = outputKind(file);
+    if (['HTML / app', 'Text / code'].includes(kind)) source();
+    else if (['Image', 'Audio', 'Video'].includes(kind)) {
+      const node = document.createElement(kind === 'Image' ? 'img' : kind.toLowerCase());
+      if (kind === 'Image') node.alt = title; else { node.controls = true; node.preload = 'metadata'; }
+      node.src = urlFor(outputBytes(file), file.mimeType);
+      node.addEventListener('error', () => { const p = document.createElement('p'); p.textContent = 'This browser cannot preview this format. Download the original file.'; body.append(p); }, { once: true });
+      body.append(node);
+    } else { const p = document.createElement('p'); p.textContent = 'Original attachment preserved. Download to open it in a compatible app. ZIP projects and office documents are not executed here.'; body.append(p); }
+    if (!dialog.open) dialog.showModal();
+  }, close() { dialog.close(); } };
+}
+
+/* OUTPUT_MODULE_END */
+/* OUTPUT_SAMPLE_START */
+// Deliberately authored local fixtures, never represented as live model output.
+function sampleFiles(provider) {
+  const samples = {
+    openai: [{ name: 'tiny-counter.html', mimeType: 'text/html', text: '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tiny counter · Sample app</title><style>body{font:18px system-ui;background:#f0f5e9;color:#183a2b;padding:32px;text-align:center}button{font:inherit;background:#24563f;color:white;border:0;border-radius:12px;padding:14px 24px}output{display:block;font-size:64px;margin:22px}</style><h1>A tiny working app</h1><p>Handwritten demo fixture · no AI call</p><output id="count">0</output><button onclick="document.getElementById(\'count\').textContent=++window.counter">Add one</button><script>window.counter=0;<\/script></html>' }],
+    gemini: [{ name: 'comparison-map.svg', mimeType: 'image/svg+xml', text: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 280"><rect width="520" height="280" rx="20" fill="#eef4e8"/><text x="32" y="52" font-family="system-ui" font-size="21" fill="#183a2b">A wider perspective</text><g fill="#24563f"><rect x="32" y="88" width="96" height="100" rx="12"/><rect x="152" y="108" width="96" height="80" rx="12"/><rect x="272" y="70" width="96" height="118" rx="12"/><rect x="392" y="126" width="96" height="62" rx="12"/></g><text x="32" y="244" font-family="system-ui" font-size="15" fill="#586b58">Illustrative image fixture · not measured data</text></svg>' }],
+    grok: [{ name: 'review-template.csv', mimeType: 'text/csv', text: 'answer,accuracy,usefulness,clarity\nA,,,\nB,,,\nC,,,\nD,,,\n' }],
+    claude: [{ name: 'implementation-notes.md', mimeType: 'text/markdown', text: '# Sample implementation notes\n\n- Compare the same prompt.\n- Review every output, including files.\n- Keep the original files with the final draft.\n\nThis is an authored fixture, not a model response.\n' }],
+  };
+  return samples[provider] || [];
+}
+
+/* OUTPUT_SAMPLE_END */
+      const outputViewer = createOutputViewer({ offline: true });
       const providers=[
         {id:'openai',name:'ChatGPT',letter:'O'},
         {id:'gemini',name:'Gemini',letter:'G'},
@@ -80,14 +179,20 @@ function filterSessions(sessions, { query = "", mode = "all" } = {}) {
 }
 /* SESSION_SEARCH_END */
       function renderHistory(){const query=$('session-search').value,matches=filterSessions(state.sessions,{query});$('session-result-count').textContent=matches.length+' of '+state.sessions.length+' sessions';$('clear-session-search').disabled=!query;$('history').innerHTML=matches.length?matches.map(s=>`<button data-load="${s.id}" class="${s.id===state.current?'active':''}"><strong>${escape(s.prompt)}</strong><small>DEMO · ${new Date(s.createdAt).toLocaleDateString()}</small></button>`).join(''):'<p class="quiet">'+(state.sessions.length?'No sessions match. Try another prompt or clear the search.':'Your comparisons will appear here.')+'</p>'}
-      function renderAnswers(){const s=current();let answers=[...s.answers];if(state.sort==='score')answers.sort((a,b)=>(overall(b)||-1)-(overall(a)||-1));$('answers').innerHTML=answers.map(a=>{const p=providers.find(p=>p.id===a.provider);const title=state.blind?'Answer '+a.label:p.name;return `<article class="card ${a.selected?'selected':''}"><div class="card-head"><span class="icon">${state.blind?a.label:p.letter}</span><div><h3>${title}</h3><small>${state.blind?'Blind review':'Fixed demo sample'}</small></div><span class="overall">${overall(a)||'—'}<small>/5</small></span></div><div class="answer">${samples[a.provider]}</div><div class="review">${['accuracy','usefulness','clarity'].map(c=>`<div class="criterion"><strong>${c[0].toUpperCase()+c.slice(1)}</strong><div class="score-buttons">${[1,2,3,4,5].map(n=>`<button type="button" class="${a.scores[c]===n?'on':''}" data-score="${a.provider}" data-criterion="${c}" data-value="${n}" aria-label="${c} ${n} for ${title}">${n}</button>`).join('')}</div></div>`).join('')}<textarea class="notes" rows="2" data-notes="${a.provider}" placeholder="Your notes">${escape(a.notes)}</textarea></div><div class="select-row"><label><input type="checkbox" data-select="${a.provider}" ${a.selected?'checked':''}> Use in combined answer</label><span class="quiet">SAMPLE</span></div></article>`}).join('')}
+      function renderAnswers(){const s=current();let answers=[...s.answers];if(state.sort==='score')answers.sort((a,b)=>(overall(b)||-1)-(overall(a)||-1));$('answers').innerHTML=answers.map(a=>{const p=providers.find(p=>p.id===a.provider);const title=state.blind?'Answer '+a.label:p.name;return `<article class="card ${a.selected?'selected':''}"><div class="card-head"><span class="icon">${state.blind?a.label:p.letter}</span><div><h3>${title}</h3><small>${state.blind?'Blind review':'Fixed demo sample'}</small></div><span class="overall">${overall(a)||'—'}<small>/5</small></span></div><div class="answer">${samples[a.provider]}</div>${outputList(a.artifacts||[],{blind:state.blind})}<div class="review">${['accuracy','usefulness','clarity'].map(c=>`<div class="criterion"><strong>${c[0].toUpperCase()+c.slice(1)}</strong><div class="score-buttons">${[1,2,3,4,5].map(n=>`<button type="button" class="${a.scores[c]===n?'on':''}" data-score="${a.provider}" data-criterion="${c}" data-value="${n}" aria-label="${c} ${n} for ${title}">${n}</button>`).join('')}</div></div>`).join('')}<textarea class="notes" rows="2" data-notes="${a.provider}" placeholder="Your notes">${escape(a.notes)}</textarea></div><div class="select-row"><label><input type="checkbox" data-select="${a.provider}" ${a.selected?'checked':''}> Use in combined answer</label><span class="quiet">SAMPLE</span></div></article>`}).join('')}
       function renderScorecard(){const s=current();const rows=[...s.answers].sort((a,b)=>(overall(b)||-1)-(overall(a)||-1));$('scorecard').innerHTML=`<table class="scorecard"><thead><tr><th>ANSWER</th><th>ACCURACY</th><th>USEFULNESS</th><th>CLARITY</th><th>OVERALL</th></tr></thead><tbody>${rows.map(a=>{const p=providers.find(p=>p.id===a.provider);return `<tr><td><strong>${state.blind?'Answer '+a.label:p.name}</strong></td><td>${a.scores.accuracy||'—'}</td><td>${a.scores.usefulness||'—'}</td><td>${a.scores.clarity||'—'}</td><td><strong>${overall(a)||'—'}</strong></td></tr>`}).join('')}</tbody></table><p class="quiet">Scores express your assessment. They are not independent fact checks.</p>`}
-      function renderCombined(){const s=current(),chosen=s.answers.filter(a=>a.selected);$('combined').innerHTML=`<div class="combine"><section class="panel"><div class="eyebrow">BUILD YOUR BEST ANSWER</div><h3>Better, together.</h3><p>Select answers in the Answers tab, then assemble their strongest points.</p><div>${s.answers.map(a=>`<div class="source"><span>Answer ${a.label} · ${providers.find(p=>p.id===a.provider).name}</span><strong>${a.selected?'Selected':'—'}</strong></div>`).join('')}</div><label class="field">Direction for the combined answer<textarea id="direction" rows="4" placeholder="Keep actionable steps and flag disagreements.">${escape(s.direction||'')}</textarea></label><button class="primary" id="assemble" ${chosen.length?'':'disabled'}>Assemble editable draft ↗</button><p class="quiet">This copies fixed samples locally. It does not ask an AI to synthesize.</p></section><section class="panel"><div class="eyebrow">YOUR COMBINED ANSWER</div><textarea class="draft" id="draft" placeholder="Select answers and assemble a draft.">${escape(s.draft||'')}</textarea><div class="draft-actions"><span class="quiet" id="save-state">${s.draft?'Saved in this browser':'No draft yet'}</span><button class="primary" id="save-draft">Save draft</button></div></section></div>`;
-        $('direction').oninput=e=>{s.direction=e.target.value;persist()};$('draft').oninput=()=>{$('save-state').textContent='Unsaved changes'};$('save-draft').onclick=()=>{s.draft=$('draft').value;s.updatedAt=new Date().toISOString();persist();$('save-state').textContent='Saved in this browser';toast('Draft saved in this browser.')};$('assemble').onclick=()=>{const direction=$('direction').value.trim();s.direction=direction;s.draft=`Combined working draft\n\nPrompt: ${s.prompt}\n\n${direction?`Direction: ${direction}\n\n`:''}${chosen.map(a=>`Answer ${a.label} — ${providers.find(p=>p.id===a.provider).name}\n${a.notes?`Your note: ${a.notes}\n`:''}${samples[a.provider].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()}`).join('\n\n———\n\n')}\n\nReview disagreements and verify important claims before use.`;s.updatedAt=new Date().toISOString();persist();renderCombined();toast('Editable sample compilation created.')}}
+      function renderCombined(){const s=current(),chosen=s.answers.filter(a=>a.selected);$('combined').innerHTML=`<div class="combine"><section class="panel"><div class="eyebrow">BUILD YOUR BEST ANSWER</div><h3>Better, together.</h3><p>Select answers in the Answers tab, then assemble their strongest points.</p><div>${s.answers.map(a=>`<div class="source"><span>Answer ${a.label} · ${providers.find(p=>p.id===a.provider).name}</span><strong>${a.selected?'Selected':'—'}</strong></div>`).join('')}</div><label class="field">Direction for the combined answer<textarea id="direction" rows="4" placeholder="Keep actionable steps and flag disagreements.">${escape(s.direction||'')}</textarea></label><button class="primary" id="assemble" ${chosen.length?'':'disabled'}>Assemble editable draft ↗</button><p class="quiet">This copies fixed samples locally. It does not ask an AI to synthesize.</p></section><section class="panel"><div class="eyebrow">YOUR COMBINED ANSWER</div>${outputList(s.answers.flatMap(a=>a.artifacts||[]).filter(f=>(s.combinedArtifactIds||[]).includes(f.id)),{blind:state.blind})}<textarea class="draft" id="draft" placeholder="Select answers and assemble a draft.">${escape(s.draft||'')}</textarea><div class="draft-actions"><span class="quiet" id="save-state">${s.draft?'Saved in this browser':'No draft yet'}</span><button class="primary" id="save-draft">Save draft</button></div></section></div>`;
+        $('direction').oninput=e=>{s.direction=e.target.value;persist()};$('draft').oninput=()=>{$('save-state').textContent='Unsaved changes'};$('save-draft').onclick=()=>{s.draft=$('draft').value;s.updatedAt=new Date().toISOString();persist();$('save-state').textContent='Saved in this browser';toast('Draft saved in this browser.')};$('assemble').onclick=()=>{const direction=$('direction').value.trim();s.direction=direction;s.combinedArtifactIds=chosen.flatMap(a=>(a.artifacts||[]).map(f=>f.id));s.draft=`Combined working draft\n\nPrompt: ${s.prompt}\n\n${direction?`Direction: ${direction}\n\n`:''}${chosen.map(a=>`Answer ${a.label} — ${providers.find(p=>p.id===a.provider).name}\n${a.notes?`Your note: ${a.notes}\n`:''}${samples[a.provider].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim()}`).join('\n\n———\n\n')}\n\nReview disagreements and verify important claims before use.`;s.updatedAt=new Date().toISOString();persist();renderCombined();toast('Editable sample compilation created.')}}
       function render(){renderProviders();renderHistory();const s=current();$('session').classList.toggle('hidden',!s);$('composer').classList.toggle('hidden',!!s);$('hero').classList.toggle('hidden',!!s);$('notice').classList.toggle('hidden',!!s);if(!s)return;$('saved-prompt').textContent=s.prompt;document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));for(const id of ['answers','scorecard','combined'])$(id).classList.toggle('hidden',id!==state.tab);$('blind').checked=state.blind;$('sort').value=state.sort;if(state.tab==='answers')renderAnswers();if(state.tab==='scorecard')renderScorecard();if(state.tab==='combined')renderCombined()}
-      $('composer').onsubmit=e=>{e.preventDefault();const ids=[...$('providers').querySelectorAll('input:checked')].map(x=>x.value);if(!ids.length)return toast('Select at least one sample.');const prompt=$('prompt').value.trim();if(!prompt)return;const s={id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),prompt,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),providerIds:ids,direction:'',draft:'',answers:ids.map((id,i)=>({provider:id,label:String.fromCharCode(65+i),scores:{accuracy:null,usefulness:null,clarity:null},notes:'',selected:false}))};state.sessions.unshift(s);state.sessions=state.sessions.slice(0,12);state.current=s.id;state.tab='answers';persist();render();toast('Four fixed sample perspectives loaded. No API calls.')};
+      $('composer').onsubmit=e=>{e.preventDefault();const ids=[...$('providers').querySelectorAll('input:checked')].map(x=>x.value);if(!ids.length)return toast('Select at least one sample.');const prompt=$('prompt').value.trim();if(!prompt)return;const s={id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(36),prompt,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),providerIds:ids,direction:'',draft:'',answers:ids.map((id,i)=>({provider:id,label:String.fromCharCode(65+i),scores:{accuracy:null,usefulness:null,clarity:null},notes:'',selected:false,artifacts:sampleFiles(id).map(f=>({id:crypto.randomUUID(),name:f.name,mimeType:f.mimeType,size:new TextEncoder().encode(f.text).length,encoding:'base64',origin:'demo',data:btoa(Array.from(new TextEncoder().encode(f.text),b=>String.fromCharCode(b)).join(''))}))}))};state.sessions.unshift(s);state.sessions=state.sessions.slice(0,12);state.current=s.id;state.tab='answers';persist();render();toast('Four fixed sample perspectives loaded. No API calls.')};
       $('providers').onchange=renderProviders;$('new').onclick=()=>{state.current=null;state.tab='answers';$('prompt').value='';persist();render();setTimeout(()=>$('prompt').focus(),0)};$('history').onclick=e=>{const b=e.target.closest('[data-load]');if(b){state.current=b.dataset.load;state.tab='answers';persist();render()}};document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(b){state.tab=b.dataset.tab;persist();render()}};$('blind').onchange=e=>{state.blind=e.target.checked;persist();render()};$('sort').onchange=e=>{state.sort=e.target.value;persist();render()};$('answers').onclick=e=>{const b=e.target.closest('[data-score]');if(!b)return;const a=current().answers.find(a=>a.provider===b.dataset.score),n=Number(b.dataset.value);a.scores[b.dataset.criterion]=a.scores[b.dataset.criterion]===n?null:n;a.updatedAt=new Date().toISOString();persist();renderAnswers()};$('answers').onchange=e=>{const a=current().answers.find(a=>a.provider===(e.target.dataset.select||e.target.dataset.notes));if(!a)return;if(e.target.dataset.select)a.selected=e.target.checked;if(e.target.dataset.notes)a.notes=e.target.value;current().updatedAt=new Date().toISOString();persist();renderAnswers()};
       $('export').onclick=()=>{const s=current();const blob=new Blob([JSON.stringify({application:'Prism offline demo',warning:'Fixed samples; no model provider was called.',session:s},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='prism-demo-'+s.id.slice(0,8)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};$('copy').onclick=async()=>{const d=current()?.draft;if(!d)return toast('Create a combined answer first.');try{await navigator.clipboard.writeText(d);toast('Combined answer copied.')}catch{toast('Select the combined text and copy it manually.')}};$('clear').onclick=()=>{if(confirm('Delete all Prism demo sessions saved in this browser?')){state.sessions=[];state.current=null;persist();render();toast('Demo data cleared.')}};
+      document.addEventListener('click', event => {
+        const inspect=event.target.closest('[data-output-open]'), download=event.target.closest('[data-output-download]');
+        const id=inspect?.dataset.outputOpen || download?.dataset.outputDownload;
+        if(!id)return;const file=current()?.answers.flatMap(a=>a.artifacts||[]).find(f=>f.id===id);
+        if(!file)return;if(download)saveOutput(file);else outputViewer.open(file,state.blind?'Output file · identity hidden':file.name);
+      });
       $('session-search').oninput=renderHistory;$('clear-session-search').onclick=()=>{$('session-search').value='';renderHistory();$('session-search').focus()};document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&!e.altKey){e.preventDefault();$('session-search').focus();$('session-search').select()}});
       $('prompt').value='Give me a practical plan to turn an idea into a useful app. Compare the trade-offs and tell me what to test first.';render();
     })();

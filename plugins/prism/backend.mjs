@@ -1,3 +1,4 @@
+import { presentRun } from '../../src/artifacts.mjs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../../src/server.mjs';
@@ -44,7 +45,7 @@ export async function createBackend({ directory, env = process.env, fetcher, tim
     if (!acknowledged) throw new AppError('Confirm that this action sends data to the selected providers and can use API credits.');
   }
   function state(id) {
-    const run = id ? app.store.get(id) : null;
+    const run = id ? presentRun(app.store.get(id)) : null;
     return { run, sessions: app.store.list(), connections: app.store.connections(), liveEnabled,
       busy: !!id && jobs.has(id), providers: PROVIDERS.map(({id, name}) => ({id, name})) };
   }

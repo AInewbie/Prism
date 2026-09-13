@@ -1,3 +1,4 @@
+import { presentRun } from '../src/artifacts.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -155,7 +156,7 @@ test("partial outputs are flagged; empty outputs and upstream errors are not dis
   );
   assert.throws(
     () => parseAnswer("gemini", { candidates: [] }),
-    /No visible text/,
+    /No supported visible output/,
   );
   let calls = 0;
   await assert.rejects(
@@ -501,7 +502,7 @@ test("draft history preserves legacy edits, restores without loss, rejects stale
   assert.ok(md.includes("## Draft history") && md.includes("Edited work"));
   await app.close();
   const reopened = new Store(directory, {});
-  assert.deepEqual(reopened.get(legacy.id), run);
+  assert.deepEqual(presentRun(reopened.get(legacy.id)), run);
   reopened.close();
 });
 

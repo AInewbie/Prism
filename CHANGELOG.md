@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.0 — 14 September 2026 · mixed outputs
+
+- Retain typed output files, provenance, exact bytes and immutable IDs alongside
+  answer text; preserve old sessions without a migration or credential change.
+- Extract fenced code and supported provider inline media/file references.
+  File-only supported responses succeed; malformed media has an explicit warning.
+- Add file upload, image/source/media viewers, isolated interactive HTML preview,
+  exact downloads and ZIP export. Unsupported binary formats remain downloadable.
+- Keep source files with combined drafts and restored history without repeated
+  binary storage. Text synthesis receives metadata only, with that limit visible.
+- Reset reviews for newly attached content; reject stale attachments/reviews.
+  Keep received text when a comparison reaches its output-file limit.
+- Share output viewers and sample files with the direct-open HTML demo. No runtime
+  dependency added. Native widget shows file counts; browser handles rich previews.
+- Verify 35 automated tests, full signed-in desktop/phone regression workflows,
+  mixed-output browser checks and direct-open HTML demo checks. Add
+  provider/schema, file-validation, export/CRC, persistence and browser isolation coverage. Live providers, physical Samsung, native account installation
+  and production hosting remain unverified/unperformed.
+
 ## 0.3.2 — 14 September 2026 · searchable sessions
 
 - Search saved session titles, combine Demo/Live filters, see result counts and

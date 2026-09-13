@@ -1,5 +1,12 @@
 # Changelog
 
+## Offline HTML demo — 14 September 2026
+
+- Add one self-contained HTML file for trying Prism without installation,
+  compilation, a server or network requests.
+- Preserve the core compare, score, select, combine, edit, browser-save and JSON
+  export experience using clearly labelled fixed samples only.
+
 ## Repository publication — 13 September 2026
 
 - Set the owner-supplied AInewbie/Prism repository as the source destination and

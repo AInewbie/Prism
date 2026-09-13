@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0 — 14 September 2026 · bounded source-aware synthesis
+
+- Add an explicit, default-off choice to send bounded UTF-8 text, code, CSV,
+  JSON and HTML artifact contents to the selected synthesis provider.
+- Show the exact server-generated system instruction and structured synthesis
+  payload before the call. Identify every included, truncated and excluded file.
+- Cap disclosure at 12 files, 20,000 characters per file and 60,000 characters
+  total. Keep images and every other binary/unsupported output metadata-only.
+- Treat included source as untrusted data, never instructions, and never execute
+  it during synthesis. Record the selected file-content mode with saved drafts.
+- Keep existing sessions, files, credentials, provider adapters, output modes,
+  compilation and default metadata-only behavior backward-compatible.
+- Verify 39 automated tests plus full desktop/phone browser, rich-output, native
+  widget and direct-open HTML demo workflows. No live provider call, merge,
+  deployment, charge or physical Samsung test was performed.
+
 ## 0.5.0 — 14 September 2026 · explicit visual requests
 
 - Add an explicit output selector for text/code/files or generated image with

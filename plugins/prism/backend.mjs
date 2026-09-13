@@ -76,6 +76,7 @@ export async function createBackend({ directory, env = process.env, fetcher, tim
       await call('/runs/' + args.run_id + '/combine', 'POST', {
         providers: args.providers, method: args.method, direction: args.direction,
         provider: args.provider, version: args.version,
+        includeReadableFiles: args.include_readable_files === true,
       });
     },
     setModel(id, model) {

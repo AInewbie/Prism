@@ -31,6 +31,9 @@ const S = {
   creating: false,
   fileBusy: false,
   history: [],
+  synthesisPreviewSignature: "",
+  synthesisPreviewRequested: "",
+  synthesisPreviewTimer: null,
 };
 let token = new URLSearchParams(location.hash.slice(1)).get("key");
 if (token) {
@@ -465,7 +468,8 @@ function renderCombine() {
   if (prior) $("synth-provider").value = prior;
   if (S.combinedDraft === null) $("combined-text").value = run.combined.text;
   $("combined-meta").textContent = run.combined.method
-    ? run.combined.method + " · Sources " + run.combined.sources.join(", ")
+    ? run.combined.method + " · Sources " + run.combined.sources.join(", ") +
+      (run.combined.fileContentMode === "bounded-readable-text" ? " · readable file contents used" : "")
     : "An editable space for the strongest ideas.";
   $("combined-save-state").textContent =
     S.combinedDraft !== null
@@ -490,26 +494,14 @@ function renderCombine() {
       : "Synthesize selected answers ✧";
   $("synthesis-note").textContent =
     run.mode === "demo"
-      ? "Demo: combines the local samples without calling any provider."
+      ? "Demo: combines the local samples without calling any provider. The exact preview shows what a live synthesis would disclose."
       : "One API request to " +
         p($("synth-provider").value)?.name +
-        ". Sends text, file names/types, scores and notes; file contents are not sent. Original files stay attached to the draft. API charges apply.";
-  $("synthesis-preview").textContent = JSON.stringify(
-    {
-      originalPrompt: run.prompt,
-      sharedInstructions: run.instructions,
-      direction: $("combine-direction").value,
-      selectedAnswers: selected.map((r) => ({
-        label: r.label,
-        answer: r.text,
-        files: runFiles(r).map(f => ({ name: f.name, mimeType: f.mimeType, size: f.size, contentsIncluded: false })),
-        scores: r.scores,
-        notes: r.notes,
-      })),
-    },
-    null,
-    2,
-  );
+        ". Sends answer text, scores, notes and file metadata" +
+        ($("include-readable-files").checked ? ", plus the readable file contents shown below. " : ". File contents stay local. ") +
+        "Original files stay attached to the draft. API charges apply.";
+  $("include-readable-files").disabled = busy();
+  queueSynthesisPreview(selected);
   $("combined-text").disabled = S.combineBusy;
   $("save-combined").disabled = S.combineBusy || S.combinedDraft === null;
   const history = [...(run.combinedHistory || [])].reverse();
@@ -522,6 +514,33 @@ function renderCombine() {
   if (history.some((draft) => draft.historyId === priorRevision))
     $("history-select").value = priorRevision;
   renderHistoryPreview();
+}
+function queueSynthesisPreview(selected) {
+  clearTimeout(S.synthesisPreviewTimer);
+  if (!selected.length) {
+    S.synthesisPreviewSignature = "";
+    $("synthesis-preview").textContent = "Select at least one completed answer.";
+    return;
+  }
+  const request = {
+    providers: selected.map((r) => r.provider),
+    direction: $("combine-direction").value,
+    includeReadableFiles: $("include-readable-files").checked,
+  };
+  const signature = S.run.id + ":" + S.run.updatedAt + ":" + JSON.stringify(request);
+  if (signature === S.synthesisPreviewSignature) return;
+  S.synthesisPreviewRequested = signature;
+  $("synthesis-preview").textContent = "Preparing exact payload preview…";
+  S.synthesisPreviewTimer = setTimeout(async () => {
+    try {
+      const data = await api("/runs/" + S.run.id + "/synthesis-preview", { method: "POST", data: request });
+      if (signature !== S.synthesisPreviewRequested) return;
+      S.synthesisPreviewSignature = signature;
+      $("synthesis-preview").textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+      $("synthesis-preview").textContent = "Preview unavailable: " + error.message;
+    }
+  }, 180);
 }
 function renderHistoryPreview() {
   const draft = (S.run.combinedHistory || []).find(
@@ -741,6 +760,7 @@ async function combine(method) {
         providers: selected.map((r) => r.provider),
         provider: $("synth-provider").value,
         direction: $("combine-direction").value,
+        includeReadableFiles: $("include-readable-files").checked,
         version: S.run.combined.version,
       },
     });
@@ -979,6 +999,10 @@ $("compile-button").onclick = () => combine("compile");
 $("synthesize-button").onclick = () => combine("synthesize");
 $("synth-provider").onchange = renderCombine;
 $("combine-direction").oninput = renderCombine;
+$("include-readable-files").onchange = () => {
+  S.synthesisPreviewSignature = "";
+  renderCombine();
+};
 $("stop-button").onclick = async () => {
   try {
     await api("/runs/" + S.run.id + "/stop", { method: "POST", data: {} });

@@ -99,9 +99,14 @@ test('live browser calls are disabled by default and restart requires reauthenti
   assert.equal(response.status, 401); await next.close();
 });
 test('explicitly enabled browser calls reach the fixture provider and preserve synthesis', async t => {
-  let calls = 0;
+  let calls = 0; const requests = [];
   const { call } = await fixture(t, { env: { PRISM_BROWSER_PASSWORD: password, PRISM_BROWSER_ALLOW_LIVE: '1' },
-    fetcher: async () => { calls++; return Response.json({ status: 'completed', output: [{ type: 'message', content: [{ type: 'output_text', text: 'Synthetic provider answer' }] }] }); } });
+    fetcher: async (_url, options) => {
+      calls++; requests.push(JSON.parse(options.body));
+      return Response.json({ status: 'completed', output: [{ type: 'message', content: [{
+        type: 'output_text', text: 'Synthetic provider answer',
+      }] }] });
+    } });
   const login = await call('/api/auth/login', { method: 'POST', data: { password } });
   const cookie = login.headers.get('set-cookie').split(';')[0];
   const request = (path, data, method = 'POST') => call(path, { method, cookie, data });
@@ -109,8 +114,14 @@ test('explicitly enabled browser calls reach the fixture provider and preserve s
   const created = await request('/api/runs', { mode: 'live', prompt: 'Synthetic only', providers: ['openai'] });
   const id = (await created.json()).run.id;
   assert.equal((await request('/api/runs/' + id + '/answer', { provider: 'openai' })).status, 200);
-  const combined = await request('/api/runs/' + id + '/combine', { providers: ['openai'], method: 'synthesize', provider: 'openai', version: 0 });
+  assert.equal((await request('/api/runs/' + id + '/artifacts', { provider: 'openai', version: 0,
+    files: [{ name: 'context.json', mimeType: 'application/json', text: '{"artifactOnly":42}' }] })).status, 201);
+  const combined = await request('/api/runs/' + id + '/combine', { providers: ['openai'], method: 'synthesize',
+    provider: 'openai', version: 0, includeReadableFiles: true });
   assert.equal(combined.status, 200); const body = await combined.json();
-  assert.equal(body.run.combined.text, 'Synthetic provider answer');
+  assert.match(body.run.combined.text, /Synthetic provider answer/);
+  assert.equal(body.run.combined.fileContentMode, 'bounded-readable-text');
+  assert.match(JSON.stringify(requests[1]), /bounded-readable-text/);
+  assert.match(JSON.stringify(requests[1]), /artifactOnly/);
   assert.equal(calls, 2); assert.ok(!JSON.stringify(body).includes('synthetic-private-key'));
 });

@@ -263,6 +263,12 @@ git -C ../prism-history switch builder/browser-sign-in
 
 ## Source repository
 
+For an immediate no-install preview, download `demo/Prism-demo.html` and open it
+directly in a modern browser. It is a self-contained offline demo with fixed,
+clearly labelled sample answers. It supports comparison, manual scoring, source
+selection, an editable combined answer, local demo history and JSON export. It
+does not connect to model providers, accept API keys or require a server.
+
 The commissioned repository is [AInewbie/Prism](https://github.com/AInewbie/Prism).
 It contains the Prism 0.3.1 browser-access preview, the standalone app, the native
 ChatGPT plugin preview, tests, dependency lock and version history. This

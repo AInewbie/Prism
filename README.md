@@ -1,10 +1,25 @@
 # Prism — model comparison studio
 
-**Version 0.5.0 · explicit visual requests · 14 September 2026**
+**Version 0.6.0 · bounded source-aware synthesis · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
+
+## New: synthesize readable output files
+
+In **Combined answer**, enable **Include readable file contents** when a
+synthesizer should use an answer's text, code, CSV, JSON or single-file HTML
+source—not just its filename. This is off by default. **Preview exact synthesis
+payload** shows the same system instruction and structured payload the provider
+will receive before you make the call.
+
+Prism includes at most 12 readable files, 20,000 characters per file and 60,000
+characters total. It marks every truncation and exclusion in the preview.
+Images, audio, video, archives, office documents, invalid UTF-8 and provider
+references remain metadata-only. Included source is labelled as untrusted data
+and is never executed during synthesis. The saved combined draft records whether
+bounded readable contents were used.
 
 ## New: request generated images explicitly
 
@@ -35,8 +50,9 @@ The full standalone/browser app also needs no dependency installation.
 
 Documents and multi-file app ZIPs download without running; xAI image/video
 generation, Claude generated-file retrieval and arbitrary remote file retrieval
-are not enabled. Synthesis combines text and retains files; it
-receives file metadata, not image/file contents. Files are limited to 4 MB each.
+are not enabled. Synthesis always retains selected files and can optionally
+receive bounded readable source; binary/image contents are not sent. Files are
+limited to 4 MB each.
 See [supported outputs, limits and verification](docs/OUTPUTS.md).
 
 ## Find saved comparisons

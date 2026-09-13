@@ -1,4 +1,4 @@
-# Mixed outputs · Prism 0.5.0
+# Mixed outputs · Prism 0.6.0
 
 An answer is now text plus output files. Compare and score the whole answer,
 select it for a combined draft, and keep the original files with that draft.
@@ -64,11 +64,14 @@ Compilation and synthesis keep references to all files in selected answers.
 The combined editor and saved revision preview show those files. Restoring a
 revision restores its file selection without duplicating or deleting bytes.
 
-**AI synthesis currently receives text plus file names/types/sizes, scores and
-notes. It does not receive file bytes or inspect images.** Its instructions
-explicitly prohibit claiming to have evaluated or merged file contents. The
-files are kept beside the combined text; this is not an image, video or app
-merging engine. The request preview shows the same file manifest.
+AI synthesis always receives answer text, scores, notes and file metadata.
+**Readable file contents are optional and off by default.** When enabled, Prism
+adds valid UTF-8 text/code/CSV/JSON/HTML source up to 12 files, 20,000 characters
+per file and 60,000 characters total. The exact server-generated request preview
+marks included contents, truncations and exclusions before the provider call.
+Images and other binary files remain metadata-only. Included source is explicitly
+untrusted data and is never executed. Files stay beside the combined text; this
+is not an image, video or multi-file app merging engine.
 
 - **Download** gets one exact original file.
 - **Export files ZIP** contains `comparison.md`, a metadata `manifest.json`

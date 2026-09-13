@@ -120,7 +120,7 @@ export function createApp({
         return reply(res, 200, {
           providers: PROVIDERS,
           connections: store.connections(),
-          version: "0.5.0",
+          version: "0.6.0",
         });
       const connectionMatch = path.match(
         /^\/api\/connections\/(openai|gemini|grok|claude)$/,
@@ -183,7 +183,7 @@ export function createApp({
         throw new AppError('Not found.', 404);
       }
       const match = path.match(
-        /^\/api\/runs\/([a-f0-9-]{36})(?:\/(answer|review|stop|combine|combined|export))?$/,
+        /^\/api\/runs\/([a-f0-9-]{36})(?:\/(answer|review|stop|combine|combined|export|synthesis-preview))?$/,
       );
       if (!match) throw new AppError("Not found.", 404);
       const [, id, action] = match,
@@ -194,7 +194,7 @@ export function createApp({
           "format",
         );
         if (format === 'zip') {
-          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.5.0', run: presentRun(run) }, null, 2)]];
+          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.6.0', run: presentRun(run) }, null, 2)]];
           for (const file of run.artifacts || []) if (file.encoding === 'base64') entries.push(['files/' + file.id + '/' + file.name, Buffer.from(file.data, 'base64')]);
           return reply(res, 200, zipFiles(entries), 'application/zip');
         }
@@ -205,12 +205,23 @@ export function createApp({
             exportMarkdown(run),
             "text/markdown; charset=utf-8",
           );
-        return reply(res, 200, { application: "Prism", version: "0.5.0", run });
+        return reply(res, 200, { application: "Prism", version: "0.6.0", run });
       }
       if (action === "stop" && req.method === "POST") {
         for (const [key, controller] of active)
           if (key.startsWith(id + ":")) controller.abort();
         return reply(res, 200, { stopping: true });
+      }
+      if (action === "synthesis-preview" && req.method === "POST") {
+        const request = await body(req);
+        if (request.includeReadableFiles !== undefined && typeof request.includeReadableFiles !== 'boolean')
+          throw new AppError('File-content choice must be true or false.');
+        const answers = selectedAnswers(run, request.providers);
+        const direction = text(request.direction ?? '', 'Combination instructions', 8000);
+        const preview = synthesisInput(run, answers, direction, {
+          includeReadableFiles: request.includeReadableFiles === true,
+        });
+        return reply(res, 200, { system: preview.system, payload: JSON.parse(preview.prompt) });
       }
       if (action === "review" && req.method === "PATCH") {
         const patch = await body(req);
@@ -290,7 +301,11 @@ export function createApp({
             "Combination instructions",
             8000,
           );
-          combinePrompt = synthesisInput(run, answers, direction);
+          if (request.includeReadableFiles !== undefined && typeof request.includeReadableFiles !== 'boolean')
+            throw new AppError('File-content choice must be true or false.');
+          combinePrompt = synthesisInput(run, answers, direction, {
+            includeReadableFiles: request.includeReadableFiles === true,
+          });
           activeKey = id + ":combine";
           if (active.has(activeKey))
             throw new AppError("A combination is already in progress.", 409);
@@ -423,6 +438,7 @@ export function createApp({
                   notes: r.notes,
                 })),
                 instructions: request.direction || "",
+                fileContentMode: request.includeReadableFiles === true ? 'bounded-readable-text' : 'metadata-only',
                 version: current.combined.version + 1,
               });
             }
@@ -488,7 +504,7 @@ if (
     process.exitCode = 1;
   });
   app.server.listen(port, "127.0.0.1", () => {
-    console.log("Prism 0.5.0 — local model comparison studio");
+    console.log("Prism 0.6.0 — local model comparison studio");
     console.log("Open: http://127.0.0.1:" + port + "/#key=" + app.token);
     console.log("Keep this terminal open. Press Ctrl+C to stop.");
   });

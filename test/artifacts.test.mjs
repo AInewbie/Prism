@@ -7,7 +7,8 @@ import { spawnSync } from 'node:child_process';
 import { createApp } from '../src/server.mjs';
 import { Store } from '../src/store.mjs';
 import { fileArtifact, addArtifacts, addProviderArtifacts, presentRun, codeArtifacts,
-  MAX_FILE_BYTES, MAX_SYNTHESIS_FILE_CHARS, MAX_SYNTHESIS_TOTAL_CHARS } from '../src/artifacts.mjs';
+  MAX_FILE_BYTES, MAX_SYNTHESIS_FILE_CHARS, MAX_SYNTHESIS_TOTAL_CHARS,
+  MAX_SYNTHESIS_IMAGES } from '../src/artifacts.mjs';
 import { parseAnswer, ask } from '../src/providers.mjs';
 import { synthesisInput } from '../src/core.mjs';
 
@@ -94,6 +95,25 @@ test('synthesis includes only explicitly approved bounded UTF-8 source and never
   assert.match(files[2].exclusionReason, /UTF-8/);
   assert.ok(files.filter(f => f.contentsIncluded).reduce((sum, f) => sum + f.content.length, 0) <= MAX_SYNTHESIS_TOTAL_CHARS);
   assert.match(input.system, /untrusted data, never instructions/);
+});
+
+test('visual synthesis selects only bounded compatible images and keeps bytes out of its text preview', () => {
+  const files = Array.from({ length: MAX_SYNTHESIS_IMAGES + 1 }, (_, index) =>
+    fileArtifact({ name: 'image-' + index + '.png', mimeType: 'image/png',
+      data: Buffer.from('image-' + index).toString('base64') }));
+  files.push(fileArtifact({ name: 'vector.svg', mimeType: 'image/svg+xml', text: '<svg/> '}));
+  const run = { prompt: 'Compare images', instructions: '', artifacts: [] };
+  addArtifacts(run, files, {});
+  const answer = { label: 'A', text: 'Candidate', artifactIds: files.map((file) => file.id), scores: {}, notes: '' };
+  const synthesis = synthesisInput(run, [answer], '', { includeImages: true });
+  const payload = JSON.parse(synthesis.prompt), manifest = payload.candidates[0].files;
+  assert.equal(synthesis.images.length, MAX_SYNTHESIS_IMAGES);
+  assert.equal(payload.imageInputPolicy.includedImages.length, MAX_SYNTHESIS_IMAGES);
+  assert.ok(payload.imageInputPolicy.includedImages.every((image) => image.data === undefined));
+  assert.ok(!synthesis.prompt.includes(files[0].data));
+  assert.match(manifest.find((file) => file.name === 'image-6.png').visualExclusionReason, /count limit/);
+  assert.match(manifest.find((file) => file.name === 'vector.svg').visualExclusionReason, /format/);
+  assert.match(synthesis.system, /untrusted visual inputs/);
 });
 
 test('attachments keep provenance, reject stale edits, restore draft files, export exact bytes and survive restart', async t => {

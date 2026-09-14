@@ -1,4 +1,5 @@
-import { providerArtifacts } from './artifacts.mjs';
+import { providerArtifacts, MAX_SYNTHESIS_IMAGES, MAX_SYNTHESIS_IMAGE_BYTES,
+  MAX_SYNTHESIS_IMAGE_TOTAL_BYTES } from './artifacts.mjs';
 import { AppError, provider, modelId } from "./core.mjs";
 const bases = {
   openai: "https://api.openai.com/v1",
@@ -68,6 +69,24 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
   if (!['text', 'visual'].includes(outputMode)) throw new AppError('Choose a supported output type.');
   if (outputMode === 'visual' && !['openai', 'gemini'].includes(id))
     throw new AppError('This provider does not support image output in Prism yet.');
+  const images = options.images || [];
+  if (!Array.isArray(images)) throw new AppError('Invalid visual synthesis inputs.');
+  if (images.length > MAX_SYNTHESIS_IMAGES)
+    throw new AppError('Too many visual synthesis inputs.');
+  let imageBytes = 0;
+  for (const image of images) {
+    if (!image || !['image/png', 'image/jpeg', 'image/webp'].includes(image.mimeType) ||
+        typeof image.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(image.data) || image.data.length % 4 !== 0)
+      throw new AppError('Invalid visual synthesis input.');
+    const bytes = Buffer.from(image.data, 'base64');
+    if (bytes.toString('base64') !== image.data || bytes.length > MAX_SYNTHESIS_IMAGE_BYTES)
+      throw new AppError('Invalid or oversized visual synthesis input.');
+    imageBytes += bytes.length;
+  }
+  if (imageBytes > MAX_SYNTHESIS_IMAGE_TOTAL_BYTES)
+    throw new AppError('Visual synthesis inputs exceed the total size limit.');
+  if (images.length && !['openai', 'gemini', 'claude'].includes(id))
+    throw new AppError('Visual synthesis is available with ChatGPT, Gemini or Claude.');
   let path, body;
   if (id === "openai" || id === "grok") {
     path = "/responses";
@@ -75,7 +94,12 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
       model,
       input: [
         ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: prompt },
+        { role: "user", content: images.length ? [
+          { type: 'input_text', text: prompt },
+          ...images.map((image) => ({ type: 'input_image',
+            image_url: 'data:' + image.mimeType + ';base64,' + image.data,
+            detail: 'auto' })),
+        ] : prompt },
       ],
       max_output_tokens: maxTokens,
       store: false,
@@ -85,12 +109,15 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
       } : {}),
     };
   } else if (id === "gemini") {
-    if (outputMode === 'visual') {
+    if (outputMode === 'visual' || images.length) {
       path = '/interactions';
       body = {
-        model: modelId(options.imageModel),
-        input: system ? 'Shared instructions:\n' + system + '\n\nPrompt:\n' + prompt : prompt,
-        response_format: [{ type: 'text' }, { type: 'image' }],
+        model: outputMode === 'visual' ? modelId(options.imageModel) : model,
+        input: images.length ? [
+          { type: 'text', text: system ? 'System instructions:\n' + system + '\n\nUser payload:\n' + prompt : prompt },
+          ...images.map((image) => ({ type: 'image', data: image.data, mime_type: image.mimeType })),
+        ] : (system ? 'Shared instructions:\n' + system + '\n\nPrompt:\n' + prompt : prompt),
+        ...(outputMode === 'visual' ? { response_format: [{ type: 'text' }, { type: 'image' }] } : {}),
       };
     } else {
       path = "/models/" + encodeURIComponent(model) + ":generateContent";
@@ -104,7 +131,11 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
     path = "/messages";
     body = {
       model,
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: images.length ? [
+        ...images.map((image) => ({ type: 'image', source: { type: 'base64',
+          media_type: image.mimeType, data: image.data } })),
+        { type: 'text', text: prompt },
+      ] : prompt }],
       max_tokens: maxTokens,
       ...(system ? { system } : {}),
     };

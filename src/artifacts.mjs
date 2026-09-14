@@ -8,6 +8,9 @@ export const UPLOAD_BYTES = 6_000_000;
 export const MAX_SYNTHESIS_FILES = 12;
 export const MAX_SYNTHESIS_FILE_CHARS = 20_000;
 export const MAX_SYNTHESIS_TOTAL_CHARS = 60_000;
+export const MAX_SYNTHESIS_IMAGES = 6;
+export const MAX_SYNTHESIS_IMAGE_BYTES = 4_000_000;
+export const MAX_SYNTHESIS_IMAGE_TOTAL_BYTES = 8_000_000;
 export const PREVIEW_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox allow-scripts";
 const types = { html: 'text/html', htm: 'text/html', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', ts: 'text/x-typescript', tsx: 'text/x-typescript', jsx: 'text/javascript', py: 'text/x-python', json: 'application/json', csv: 'text/csv', md: 'text/markdown', txt: 'text/plain', xml: 'text/xml', yaml: 'text/yaml', yml: 'text/yaml', sql: 'text/plain', sh: 'text/plain', pdf: 'application/pdf', zip: 'application/zip', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm' };
 export function safeName(name = 'output.bin') {
@@ -129,7 +132,7 @@ export function artifactsFor(run, owner) {
   return (run.artifacts || []).filter(f => ids.has(f.id));
 }
 export function artifactManifest(run, owner) {
-  return artifactsFor(run, owner).map(f => ({ name: f.name, mimeType: f.mimeType, size: f.size, available: f.encoding === 'base64', contentsIncluded: false }));
+  return artifactsFor(run, owner).map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: f.size, available: f.encoding === 'base64', contentsIncluded: false }));
 }
 const synthesisTextTypes = new Set([
   'application/json', 'application/javascript', 'application/xml',
@@ -141,7 +144,7 @@ function readableForSynthesis(file) {
 export function synthesisArtifactManifest(run, owner, includeContents = false,
   budget = { remaining: MAX_SYNTHESIS_TOTAL_CHARS, included: 0 }) {
   return artifactsFor(run, owner).map((file) => {
-    const metadata = { name: file.name, mimeType: file.mimeType, size: file.size,
+    const metadata = { id: file.id, name: file.name, mimeType: file.mimeType, size: file.size,
       available: file.encoding === 'base64', contentsIncluded: false };
     if (!includeContents) return metadata;
     if (file.encoding !== 'base64') return { ...metadata, exclusionReason: 'file bytes unavailable' };
@@ -156,6 +159,30 @@ export function synthesisArtifactManifest(run, owner, includeContents = false,
     return { ...metadata, contentsIncluded: true, content: sent,
       includedCharacters: sent.length, truncated: sent.length < content.length };
   });
+}
+const synthesisImageTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
+export function synthesisImageInputs(run, answers, includeImages = false) {
+  const seen = new Set(), inputs = [], decisions = new Map();
+  let totalBytes = 0;
+  for (const answer of answers) for (const file of artifactsFor(run, answer)) {
+    if (seen.has(file.id)) continue;
+    seen.add(file.id);
+    if (!includeImages) continue;
+    let exclusionReason = '';
+    if (file.encoding !== 'base64') exclusionReason = 'image bytes unavailable';
+    else if (!synthesisImageTypes.has(file.mimeType)) exclusionReason = file.mimeType?.startsWith('image/')
+      ? 'image format not supported for visual synthesis'
+      : 'not an image';
+    else if (file.size > MAX_SYNTHESIS_IMAGE_BYTES) exclusionReason = 'image exceeds per-image synthesis limit';
+    else if (inputs.length >= MAX_SYNTHESIS_IMAGES) exclusionReason = 'visual synthesis image-count limit reached';
+    else if (totalBytes + file.size > MAX_SYNTHESIS_IMAGE_TOTAL_BYTES) exclusionReason = 'visual synthesis total-byte limit reached';
+    if (exclusionReason) { decisions.set(file.id, { included: false, exclusionReason }); continue; }
+    inputs.push({ artifactId: file.id, name: file.name, mimeType: file.mimeType,
+      size: file.size, data: file.data, sourceLabel: answer.label });
+    totalBytes += file.size;
+    decisions.set(file.id, { included: true });
+  }
+  return { inputs, decisions, totalBytes };
 }
 export function artifactMarkdown(run, owner) {
   const files = artifactsFor(run, owner);

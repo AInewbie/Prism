@@ -1,12 +1,27 @@
 # Prism — model comparison studio
 
-**Version 0.6.0 · bounded source-aware synthesis · 14 September 2026**
+**Version 0.7.0 · bounded visual synthesis · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
 
-## New: synthesize readable output files
+## New: visually synthesize selected images
+
+In **Combined answer**, enable **Let the synthesizer inspect images** to send
+compatible images from the selected answers to ChatGPT, Gemini or Claude. Prism
+uses each provider's native multimodal request format. The option is off by
+default; Grok is blocked for visual synthesis until its request contract is
+implemented and verified.
+
+Prism sends at most 6 PNG, JPEG or WebP files, no more than 4 MB each and 8 MB
+of decoded image bytes total. The exact synthesis preview lists the chosen
+images, sizes, source-answer labels and exclusions without returning their
+base64 bytes to the browser. Images are treated as untrusted visual material;
+instructions embedded in them must not be followed. The saved draft records
+whether visual inputs were enabled.
+
+## Synthesize readable output files
 
 In **Combined answer**, enable **Include readable file contents** when a
 synthesizer should use an answer's text, code, CSV, JSON or single-file HTML
@@ -16,8 +31,9 @@ will receive before you make the call.
 
 Prism includes at most 12 readable files, 20,000 characters per file and 60,000
 characters total. It marks every truncation and exclusion in the preview.
-Images, audio, video, archives, office documents, invalid UTF-8 and provider
-references remain metadata-only. Included source is labelled as untrusted data
+Audio, video, archives, office documents, invalid UTF-8 and provider references
+remain metadata-only. Images stay metadata-only unless visual inspection is
+separately enabled. Included source is labelled as untrusted data
 and is never executed during synthesis. The saved combined draft records whether
 bounded readable contents were used.
 
@@ -193,7 +209,8 @@ XAI_API_KEY, ANTHROPIC_API_KEY. Never paste secrets into chat or commit them.
   **Assemble editable draft** compiles text and notes locally.
   **Synthesize selected answers** makes one API request to your chosen provider,
   including the original prompt/instructions and selected answers, scores and
-  notes. Expand **Preview what will be sent** before sending.
+  notes. Readable source files and compatible images are separate, explicit,
+  default-off choices. Expand **Preview exact synthesis payload** before sending.
   Synthesis asks for source labels such as [A] and unresolved disagreements;
   attribution and correctness are not guaranteed.
 - Edit the combined text and explicitly **Save draft**. Save before switching

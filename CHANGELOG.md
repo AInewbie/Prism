@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.7.0 — 14 September 2026 · bounded visual synthesis
+
+- Add a separate, default-off choice to send compatible images from selected
+  answers to the synthesis model for visual comparison and consolidation.
+- Use native multimodal request blocks for OpenAI Responses, Gemini Interactions
+  and Claude Messages. Block Grok before a call when visual inputs are enabled.
+- Accept PNG, JPEG and WebP inputs only; cap disclosure at 6 images, 4 MB each
+  and 8 MB decoded total. Mark included and excluded images in the preview.
+- Keep raw base64 image bytes out of the browser payload preview while showing
+  names, MIME types, sizes and source-answer labels. Treat images as untrusted
+  visual data and record the visual-input mode with each saved combined draft.
+- Preserve existing sessions, generated-image comparisons, readable-file
+  synthesis, compilation, exports, credentials and metadata-only defaults.
+- Verify 41 automated tests plus desktop and phone rich-output workflows. No
+  live provider call, charge, merge, deployment or physical Samsung test was
+  performed.
+
 ## 0.6.0 — 14 September 2026 · bounded source-aware synthesis
 
 - Add an explicit, default-off choice to send bounded UTF-8 text, code, CSV,

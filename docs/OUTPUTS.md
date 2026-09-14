@@ -1,4 +1,4 @@
-# Mixed outputs · Prism 0.6.0
+# Mixed outputs · Prism 0.7.0
 
 An answer is now text plus output files. Compare and score the whole answer,
 select it for a combined draft, and keep the original files with that draft.
@@ -69,9 +69,14 @@ AI synthesis always receives answer text, scores, notes and file metadata.
 adds valid UTF-8 text/code/CSV/JSON/HTML source up to 12 files, 20,000 characters
 per file and 60,000 characters total. The exact server-generated request preview
 marks included contents, truncations and exclusions before the provider call.
-Images and other binary files remain metadata-only. Included source is explicitly
-untrusted data and is never executed. Files stay beside the combined text; this
-is not an image, video or multi-file app merging engine.
+Images remain metadata-only unless **Let the synthesizer inspect images** is
+separately enabled. That default-off mode sends up to 6 PNG, JPEG or WebP images,
+4 MB each and 8 MB total, through native ChatGPT, Gemini or Claude image-input
+blocks. The exact preview shows image names, sizes, types and source labels while
+omitting base64 bytes. Grok, SVG and every other binary format remain
+metadata-only. Included source and images are explicitly untrusted and are never
+executed. Files stay beside the combined text; this is not a video, office
+document or multi-file app merging engine.
 
 - **Download** gets one exact original file.
 - **Export files ZIP** contains `comparison.md`, a metadata `manifest.json`
@@ -100,6 +105,7 @@ on-demand reads supply selected file bytes, avoiding retransfer on every score.
 Providers never receive a file just because it was previewed or downloaded.
 
 - Maximum 4 MB per file, 32 files and 12 MB of decoded files per comparison.
+- Visual synthesis: at most 6 PNG/JPEG/WebP inputs and 8 MB decoded image bytes.
 - Browser upload: at most 8 files totalling 4 MB per operation.
 - Provider JSON responses: at most 18 MB; model-list responses retain their 2 MB cap.
 - Workspace JSON: existing 40 MB cap. Storage-full errors retain prior saved state.
@@ -142,16 +148,21 @@ Tests use disposable synthetic workspaces and fixture files, no paid API calls.
 The output suite exercises app interactions, parent/storage/API/network isolation,
 image preview, attachment upload over the old request limit, exact file downloads,
 combined files, ZIP export and reload at desktop/phone widths. Unit/API tests
-also check all adapters, malformed/oversized data, stale reviews, file provenance,
-draft restore, ZIP CRC integrity with Python's independent reader, and restart
-persistence. Python 3 is needed for that independent ZIP verification.
+also check all adapters, native multimodal synthesis payloads, visual-input
+limits, base64 omission from previews, malformed/oversized data, stale reviews,
+file provenance, draft restore, ZIP CRC integrity with Python's independent
+reader, and restart persistence. Python 3 is needed for that independent ZIP
+verification.
 
 ## Sources consulted
 
 Official API references accessed 14 September 2026 (living documentation):
 
 - [OpenAI image-generation tool](https://developers.openai.com/api/docs/guides/tools-image-generation): configured Responses tool, forced tool choice, and returned image bytes.
+- [OpenAI images and vision](https://developers.openai.com/api/docs/guides/images-vision): Responses input-image blocks and base64 data URLs.
 - [Gemini image generation](https://ai.google.dev/gemini-api/docs/image-generation): Interactions request and text+image response format.
+- [Gemini image understanding](https://ai.google.dev/gemini-api/docs/image-understanding): inline image data, multiple-image prompts and its inline request limit.
+- [Claude vision](https://platform.claude.com/docs/en/build-with-claude/vision): base64 image source blocks and image-before-text ordering.
 - [Claude Files API](https://platform.claude.com/docs/en/build-with-claude/files): generated-file references and separate authenticated downloads.
 - [xAI image generation](https://docs.x.ai/developers/model-capabilities/images/generation): separate generation endpoint and base64 output format.
 - [MDN iframe sandbox](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe): origin isolation and explicit sandbox permissions. Browser tests verify the actual policy used here; this is not a comprehensive security certification.

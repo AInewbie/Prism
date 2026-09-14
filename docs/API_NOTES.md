@@ -6,10 +6,10 @@ No paid requests were made while building this release.
 
 | Provider           | Implemented interface                                         | Official documentation                                                                                                                                                |
 | ------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| OpenAI             | POST /v1/responses; GET /v1/models                            | [Responses](https://developers.openai.com/api/reference/typescript/resources/responses/methods/create)                                                                |
-| Gemini             | POST /v1beta/models/{model}:generateContent and /v1beta/interactions; paginated models | [Generate content](https://ai.google.dev/api/generate-content), [Image understanding](https://ai.google.dev/gemini-api/docs/image-understanding), [Models](https://ai.google.dev/api/models) |
+| OpenAI             | POST /v1/responses; GET /v1/models                            | [Responses](https://developers.openai.com/api/reference/typescript/resources/responses/methods/create), [File inputs](https://developers.openai.com/api/docs/guides/file-inputs) |
+| Gemini             | POST /v1beta/models/{model}:generateContent and /v1beta/interactions; paginated models | [Generate content](https://ai.google.dev/api/generate-content), [Document processing](https://ai.google.dev/gemini-api/docs/document-processing), [Image understanding](https://ai.google.dev/gemini-api/docs/image-understanding), [Models](https://ai.google.dev/api/models) |
 | xAI / Grok         | POST /v1/responses; GET /v1/models                            | [Generate text](https://docs.x.ai/developers/model-capabilities/text/generate-text), [Responses](https://docs.x.ai/developers/rest-api-reference/inference/responses) |
-| Anthropic / Claude | POST /v1/messages, API version 2023-06-01; paginated models   | [Create message](https://platform.claude.com/docs/en/api/messages/create), [Vision](https://platform.claude.com/docs/en/build-with-claude/vision), [List models](https://platform.claude.com/docs/en/api/models/list) |
+| Anthropic / Claude | POST /v1/messages, API version 2023-06-01; paginated models   | [Create message](https://platform.claude.com/docs/en/api/messages/create), [Vision](https://platform.claude.com/docs/en/build-with-claude/vision), [PDF support](https://platform.claude.com/docs/en/build-with-claude/pdf-support), [List models](https://platform.claude.com/docs/en/api/models/list) |
 
 The xAI text-generation guide was last updated **29 May 2026** when opened.
 Other linked pages are live references; the access date above is used here.
@@ -30,6 +30,9 @@ Decisions:
 - Default-off visual synthesis uses bounded base64 image inputs only for OpenAI,
   Gemini and Claude. Grok remains blocked until a verified image-input contract
   is implemented. Preview responses contain image metadata, never raw base64.
+- Default-off PDF synthesis uses bounded base64 document inputs only for OpenAI,
+  Gemini and Claude. Grok remains blocked until a verified PDF-input contract is
+  implemented. Preview responses contain PDF metadata, never raw base64.
 
 ## Candidate next improvements
 

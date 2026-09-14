@@ -8,7 +8,7 @@ import { createApp } from '../src/server.mjs';
 import { Store } from '../src/store.mjs';
 import { fileArtifact, addArtifacts, addProviderArtifacts, presentRun, codeArtifacts,
   MAX_FILE_BYTES, MAX_SYNTHESIS_FILE_CHARS, MAX_SYNTHESIS_TOTAL_CHARS,
-  MAX_SYNTHESIS_IMAGES } from '../src/artifacts.mjs';
+  MAX_SYNTHESIS_IMAGES, MAX_SYNTHESIS_PDFS } from '../src/artifacts.mjs';
 import { parseAnswer, ask } from '../src/providers.mjs';
 import { synthesisInput } from '../src/core.mjs';
 
@@ -114,6 +114,26 @@ test('visual synthesis selects only bounded compatible images and keeps bytes ou
   assert.match(manifest.find((file) => file.name === 'image-6.png').visualExclusionReason, /count limit/);
   assert.match(manifest.find((file) => file.name === 'vector.svg').visualExclusionReason, /format/);
   assert.match(synthesis.system, /untrusted visual inputs/);
+});
+
+test('PDF synthesis selects only explicit bounded PDF documents and keeps bytes out of its preview', () => {
+  const files = Array.from({ length: MAX_SYNTHESIS_PDFS + 1 }, (_, index) =>
+    fileArtifact({ name: 'document-' + index + '.pdf', mimeType: 'application/pdf',
+      data: Buffer.from('%PDF-1.4\n% synthetic ' + index + '\n%%EOF').toString('base64') }));
+  files.push(fileArtifact({ name: 'spoofed.pdf', mimeType: 'application/pdf', text: 'not a PDF' }));
+  const run = { prompt: 'Compare PDFs', instructions: '', artifacts: [] };
+  addArtifacts(run, files, {});
+  const answer = { label: 'A', text: 'Candidate', artifactIds: files.map((file) => file.id), scores: {}, notes: '' };
+  const synthesis = synthesisInput(run, [answer], '', { includePdfs: true });
+  const payload = JSON.parse(synthesis.prompt), manifest = payload.candidates[0].files;
+  assert.equal(synthesis.pdfs.length, MAX_SYNTHESIS_PDFS);
+  assert.equal(payload.documentInputPolicy.mode, 'bounded-inline-pdfs');
+  assert.equal(payload.documentInputPolicy.includedDocuments.length, MAX_SYNTHESIS_PDFS);
+  assert.ok(payload.documentInputPolicy.includedDocuments.every((document) => document.data === undefined));
+  assert.ok(!synthesis.prompt.includes(files[0].data));
+  assert.match(manifest.find((file) => file.name === 'document-3.pdf').documentExclusionReason, /count limit/);
+  assert.match(manifest.find((file) => file.name === 'spoofed.pdf').documentExclusionReason, /signature/);
+  assert.match(synthesis.system, /untrusted documents/);
 });
 
 test('attachments keep provenance, reject stale edits, restore draft files, export exact bytes and survive restart', async t => {

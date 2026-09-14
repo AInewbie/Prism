@@ -200,6 +200,77 @@ test("visual synthesis uses native image inputs for ChatGPT, Gemini and Claude",
   assert.throws(() => requestSpec('grok', 'secret', 'model', '', 'Payload', 1024,
     { images: [image] }), /ChatGPT, Gemini or Claude/);
 });
+test("PDF synthesis uses native document inputs for ChatGPT, Gemini and Claude", () => {
+  const pdf = { name: 'analysis.pdf', mimeType: 'application/pdf', size: 24,
+    data: Buffer.from('%PDF-1.4\n% fixture\n%%EOF').toString('base64'), sourceLabel: 'A' };
+  const openai = JSON.parse(requestSpec('openai', 'secret', 'document-model', 'System', 'Payload', 1024,
+    { pdfs: [pdf] }).init.body);
+  assert.deepEqual(openai.input[1].content.map((part) => part.type), ['input_file', 'input_text']);
+  assert.equal(openai.input[1].content[0].filename, 'analysis.pdf');
+  assert.match(openai.input[1].content[0].file_data, /^data:application\/pdf;base64,/);
+  const geminiSpec = requestSpec('gemini', 'secret', 'document-model', 'System', 'Payload', 1024,
+    { pdfs: [pdf] });
+  const gemini = JSON.parse(geminiSpec.init.body);
+  assert.ok(geminiSpec.url.endsWith('/models/document-model:generateContent'));
+  assert.equal(gemini.contents[0].parts[0].inlineData.mimeType, 'application/pdf');
+  assert.equal(gemini.contents[0].parts[0].inlineData.data, pdf.data);
+  const claude = JSON.parse(requestSpec('claude', 'secret', 'document-model', 'System', 'Payload', 1024,
+    { pdfs: [pdf] }).init.body);
+  assert.deepEqual(claude.messages[0].content.map((part) => part.type), ['document', 'text']);
+  assert.equal(claude.messages[0].content[0].source.media_type, 'application/pdf');
+  assert.equal(claude.messages[0].content[0].source.data, pdf.data);
+  assert.throws(() => requestSpec('grok', 'secret', 'model', '', 'Payload', 1024,
+    { pdfs: [pdf] }), /ChatGPT, Gemini or Claude/);
+  assert.throws(() => requestSpec('openai', 'secret', 'model', '', 'Payload', 1024,
+    { pdfs: [{ ...pdf, data: Buffer.from('not a PDF').toString('base64') }] }), /Invalid/);
+});
+test("PDF synthesis preview is explicit, bounded and preserved with the combined draft", async (t) => {
+  const requests = [];
+  const { call } = await boot(t, { fetcher: async (url, options) => {
+    requests.push({ url, body: JSON.parse(options.body) });
+    return Response.json(fixtures.openai);
+  } });
+  await call('/connections/openai', 'PUT', {
+    key: 'fixture-secret', model: 'document-model', remember: false,
+  });
+  let run = (await call('/runs', 'POST', {
+    prompt: 'Compare this document', providers: ['openai'], mode: 'live',
+  })).body.run;
+  run = (await call('/runs/' + run.id + '/answer', 'POST', { provider: 'openai' })).body.run;
+  const pdf = Buffer.from('%PDF-1.4\n% Prism fixture\n%%EOF').toString('base64');
+  run = (await call('/runs/' + run.id + '/artifacts', 'POST', {
+    provider: 'openai', version: run.responses[0].reviewVersion,
+    files: [{ name: 'evidence.pdf', mimeType: 'application/pdf', data: pdf }],
+  })).body.run;
+  const response = run.responses[0];
+  run = (await call('/runs/' + run.id + '/review', 'PATCH', {
+    provider: 'openai', version: response.reviewVersion, selected: true,
+    scores: { accuracy: 4, usefulness: 5, clarity: 4 },
+  })).body.run;
+  const preview = await call('/runs/' + run.id + '/synthesis-preview', 'POST', {
+    providers: ['openai'], provider: 'openai', includePdfs: true,
+  });
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.payload.documentInputPolicy.mode, 'bounded-inline-pdfs');
+  assert.equal(preview.body.payload.documentInputPolicy.includedDocuments[0].name, 'evidence.pdf');
+  assert.ok(!JSON.stringify(preview.body).includes(pdf));
+  const combined = await call('/runs/' + run.id + '/combine', 'POST', {
+    providers: ['openai'], provider: 'openai', method: 'synthesize', includePdfs: true,
+    version: run.combined.version,
+  });
+  assert.equal(combined.status, 200);
+  assert.equal(combined.body.run.combined.documentContentMode, 'bounded-inline-pdfs');
+  assert.equal(requests.length, 2);
+  const sentDocument = requests[1].body.input[1].content.find((part) => part.type === 'input_file');
+  assert.equal(sentDocument.filename, 'evidence.pdf');
+  assert.match(sentDocument.file_data, /^data:application\/pdf;base64,/);
+  assert.equal((await call('/runs/' + run.id + '/synthesis-preview', 'POST', {
+    providers: ['openai'], provider: 'grok', includePdfs: true,
+  })).status, 400);
+  assert.equal((await call('/runs/' + run.id + '/synthesis-preview', 'POST', {
+    providers: ['openai'], provider: 'openai', includePdfs: 'yes',
+  })).status, 400);
+});
 test("visual comparisons require capable providers and separate image models without changing text defaults", () => {
   const connection = { hasKey: true, model: "text-model", imageModel: "image-model" };
   const run = makeRun(

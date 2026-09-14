@@ -1,4 +1,4 @@
-# Mixed outputs · Prism 0.7.0
+# Mixed outputs · Prism 0.8.0
 
 An answer is now text plus output files. Compare and score the whole answer,
 select it for a combined draft, and keep the original files with that draft.
@@ -31,7 +31,8 @@ version so a later edit cannot invalidate a saved draft's references.
 | Images, including SVG | Browser image preview and exact-byte download; unsupported browser codecs show a download fallback |
 | Single-file HTML / apps | Source first, then an explicit isolated interactive preview; original HTML downloadable |
 | Audio / video | Native browser player when the MIME type and codec are supported; original download |
-| PDF, Word, Excel, PowerPoint and other binary files | Preserved as attachments and downloadable; no office-document rendering or PDF viewer in this version |
+| PDF | Preserved and downloadable; optional bounded native-model inspection during synthesis; no local rendering, extraction or execution |
+| Word, Excel, PowerPoint and other binary files | Preserved as attachments and downloadable; no office-document rendering or understanding in this version |
 | ZIP / multi-file app projects | Preserved and downloadable as the original archive; not unpacked, installed or executed by Prism |
 | Provider-hosted file references | Metadata retained with **Not downloaded**; attach the actual downloaded file for preview/export |
 
@@ -73,10 +74,14 @@ Images remain metadata-only unless **Let the synthesizer inspect images** is
 separately enabled. That default-off mode sends up to 6 PNG, JPEG or WebP images,
 4 MB each and 8 MB total, through native ChatGPT, Gemini or Claude image-input
 blocks. The exact preview shows image names, sizes, types and source labels while
-omitting base64 bytes. Grok, SVG and every other binary format remain
-metadata-only. Included source and images are explicitly untrusted and are never
-executed. Files stay beside the combined text; this is not a video, office
-document or multi-file app merging engine.
+omitting base64 bytes. PDFs remain metadata-only unless **Let the synthesizer
+inspect PDFs** is separately enabled. That default-off mode sends up to 3 PDFs,
+4 MB each and 8 MB total, through native ChatGPT, Gemini or Claude document-input
+blocks. The exact preview shows PDF names, sizes and source labels without base64.
+Grok, SVG and every other binary format remain metadata-only. Included source,
+images and PDFs are explicitly untrusted and are never executed. Files stay
+beside the combined text; this is not a video, office-document or multi-file app
+merging engine.
 
 - **Download** gets one exact original file.
 - **Export files ZIP** contains `comparison.md`, a metadata `manifest.json`
@@ -106,6 +111,7 @@ Providers never receive a file just because it was previewed or downloaded.
 
 - Maximum 4 MB per file, 32 files and 12 MB of decoded files per comparison.
 - Visual synthesis: at most 6 PNG/JPEG/WebP inputs and 8 MB decoded image bytes.
+- PDF synthesis: at most 3 PDFs, 4 MB each and 8 MB decoded document bytes.
 - Browser upload: at most 8 files totalling 4 MB per operation.
 - Provider JSON responses: at most 18 MB; model-list responses retain their 2 MB cap.
 - Workspace JSON: existing 40 MB cap. Storage-full errors retain prior saved state.
@@ -149,7 +155,7 @@ The output suite exercises app interactions, parent/storage/API/network isolatio
 image preview, attachment upload over the old request limit, exact file downloads,
 combined files, ZIP export and reload at desktop/phone widths. Unit/API tests
 also check all adapters, native multimodal synthesis payloads, visual-input
-limits, base64 omission from previews, malformed/oversized data, stale reviews,
+and PDF-input limits, base64 omission from previews, malformed/oversized data, stale reviews,
 file provenance, draft restore, ZIP CRC integrity with Python's independent
 reader, and restart persistence. Python 3 is needed for that independent ZIP
 verification.
@@ -164,5 +170,8 @@ Official API references accessed 14 September 2026 (living documentation):
 - [Gemini image understanding](https://ai.google.dev/gemini-api/docs/image-understanding): inline image data, multiple-image prompts and its inline request limit.
 - [Claude vision](https://platform.claude.com/docs/en/build-with-claude/vision): base64 image source blocks and image-before-text ordering.
 - [Claude Files API](https://platform.claude.com/docs/en/build-with-claude/files): generated-file references and separate authenticated downloads.
+- [OpenAI file inputs](https://developers.openai.com/api/docs/guides/file-inputs): Responses `input_file` blocks and base64 PDF data URLs.
+- [Gemini document processing](https://ai.google.dev/gemini-api/docs/document-processing): inline PDF data for `generateContent` and document understanding.
+- [Claude PDF support](https://platform.claude.com/docs/en/build-with-claude/pdf-support): base64 document blocks and PDF text/page-image processing.
 - [xAI image generation](https://docs.x.ai/developers/model-capabilities/images/generation): separate generation endpoint and base64 output format.
 - [MDN iframe sandbox](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe): origin isolation and explicit sandbox permissions. Browser tests verify the actual policy used here; this is not a comprehensive security certification.

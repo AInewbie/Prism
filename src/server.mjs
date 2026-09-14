@@ -120,7 +120,7 @@ export function createApp({
         return reply(res, 200, {
           providers: PROVIDERS,
           connections: store.connections(),
-          version: "0.7.0",
+          version: "0.8.0",
         });
       const connectionMatch = path.match(
         /^\/api\/connections\/(openai|gemini|grok|claude)$/,
@@ -194,7 +194,7 @@ export function createApp({
           "format",
         );
         if (format === 'zip') {
-          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.7.0', run: presentRun(run) }, null, 2)]];
+          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.8.0', run: presentRun(run) }, null, 2)]];
           for (const file of run.artifacts || []) if (file.encoding === 'base64') entries.push(['files/' + file.id + '/' + file.name, Buffer.from(file.data, 'base64')]);
           return reply(res, 200, zipFiles(entries), 'application/zip');
         }
@@ -205,7 +205,7 @@ export function createApp({
             exportMarkdown(run),
             "text/markdown; charset=utf-8",
           );
-        return reply(res, 200, { application: "Prism", version: "0.7.0", run });
+        return reply(res, 200, { application: "Prism", version: "0.8.0", run });
       }
       if (action === "stop" && req.method === "POST") {
         for (const [key, controller] of active)
@@ -218,13 +218,18 @@ export function createApp({
           throw new AppError('File-content choice must be true or false.');
         if (request.includeImages !== undefined && typeof request.includeImages !== 'boolean')
           throw new AppError('Image-understanding choice must be true or false.');
+        if (request.includePdfs !== undefined && typeof request.includePdfs !== 'boolean')
+          throw new AppError('PDF-understanding choice must be true or false.');
         if (request.includeImages === true && !['openai', 'gemini', 'claude'].includes(request.provider))
           throw new AppError('Visual synthesis is available with ChatGPT, Gemini or Claude.');
+        if (request.includePdfs === true && !['openai', 'gemini', 'claude'].includes(request.provider))
+          throw new AppError('PDF synthesis is available with ChatGPT, Gemini or Claude.');
         const answers = selectedAnswers(run, request.providers);
         const direction = text(request.direction ?? '', 'Combination instructions', 8000);
         const preview = synthesisInput(run, answers, direction, {
           includeReadableFiles: request.includeReadableFiles === true,
           includeImages: request.includeImages === true,
+          includePdfs: request.includePdfs === true,
         });
         return reply(res, 200, { synthesizer: request.provider || null, system: preview.system,
           payload: JSON.parse(preview.prompt) });
@@ -311,12 +316,17 @@ export function createApp({
             throw new AppError('File-content choice must be true or false.');
           if (request.includeImages !== undefined && typeof request.includeImages !== 'boolean')
             throw new AppError('Image-understanding choice must be true or false.');
+          if (request.includePdfs !== undefined && typeof request.includePdfs !== 'boolean')
+            throw new AppError('PDF-understanding choice must be true or false.');
           combinePrompt = synthesisInput(run, answers, direction, {
             includeReadableFiles: request.includeReadableFiles === true,
             includeImages: request.method === 'synthesize' && request.includeImages === true,
+            includePdfs: request.method === 'synthesize' && request.includePdfs === true,
           });
           if (request.method === 'synthesize' && request.includeImages === true && !combinePrompt.images.length)
             throw new AppError('No compatible PNG, JPEG or WebP image is available in the selected answers.');
+          if (request.method === 'synthesize' && request.includePdfs === true && !combinePrompt.pdfs.length)
+            throw new AppError('No compatible PDF is available in the selected answers.');
           activeKey = id + ":combine";
           if (active.has(activeKey))
             throw new AppError("A combination is already in progress.", 409);
@@ -339,6 +349,8 @@ export function createApp({
           provider(request.provider);
           if (request.includeImages === true && !['openai', 'gemini', 'claude'].includes(request.provider))
             throw new AppError('Visual synthesis is available with ChatGPT, Gemini or Claude.');
+          if (request.includePdfs === true && !['openai', 'gemini', 'claude'].includes(request.provider))
+            throw new AppError('PDF synthesis is available with ChatGPT, Gemini or Claude.');
           outputProvider = request.provider;
           outputModel = store.connections()[outputProvider]?.model;
           if (run.mode === "live" && !outputModel)
@@ -406,7 +418,7 @@ export function createApp({
               signal,
               fetcher,
               action === 'answer' ? { outputMode: run.outputMode || 'text', imageModel: run.responses.find(r => r.provider === outputProvider)?.imageModel }
-                : { images: combinePrompt.images },
+                : { images: combinePrompt.images, pdfs: combinePrompt.pdfs },
             );
           }
           if (signal.aborted) throw new AppError("Request stopped.", 499);
@@ -454,6 +466,7 @@ export function createApp({
                 instructions: request.direction || "",
                 fileContentMode: request.includeReadableFiles === true ? 'bounded-readable-text' : 'metadata-only',
                 imageContentMode: combinePrompt.images.length ? 'bounded-inline-images' : 'metadata-only',
+                documentContentMode: combinePrompt.pdfs.length ? 'bounded-inline-pdfs' : 'metadata-only',
                 version: current.combined.version + 1,
               });
             }
@@ -519,7 +532,7 @@ if (
     process.exitCode = 1;
   });
   app.server.listen(port, "127.0.0.1", () => {
-    console.log("Prism 0.7.0 — local model comparison studio");
+    console.log("Prism 0.8.0 — local model comparison studio");
     console.log("Open: http://127.0.0.1:" + port + "/#key=" + app.token);
     console.log("Keep this terminal open. Press Ctrl+C to stop.");
   });

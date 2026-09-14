@@ -432,7 +432,9 @@ function renderCombine() {
       (r) => r.selected && r.status === "complete",
     ),
     selectedImages = selected.flatMap((r) => runFiles(r)).filter((file) =>
-      ['image/png', 'image/jpeg', 'image/webp'].includes(file.mimeType));
+      ['image/png', 'image/jpeg', 'image/webp'].includes(file.mimeType)),
+    selectedPdfs = selected.flatMap((r) => runFiles(r)).filter((file) =>
+      file.mimeType === 'application/pdf');
   $("combine-sources").innerHTML = run.responses
     .filter((r) => r.status === "complete")
     .map(
@@ -473,7 +475,8 @@ function renderCombine() {
   $("combined-meta").textContent = run.combined.method
     ? run.combined.method + " · Sources " + run.combined.sources.join(", ") +
       (run.combined.fileContentMode === "bounded-readable-text" ? " · readable file contents used" : "") +
-      (run.combined.imageContentMode === "bounded-inline-images" ? " · images visually inspected" : "")
+      (run.combined.imageContentMode === "bounded-inline-images" ? " · images visually inspected" : "") +
+      (run.combined.documentContentMode === "bounded-inline-pdfs" ? " · PDFs inspected" : "")
     : "An editable space for the strongest ideas.";
   $("combined-save-state").textContent =
     S.combinedDraft !== null
@@ -491,7 +494,7 @@ function renderCombine() {
     !selected.length ||
     S.combinedDraft !== null ||
     Object.keys(S.notes).length > 0 ||
-    ($("include-images").checked && !currentVisualProviderSupported);
+    (($("include-images").checked || $("include-pdfs").checked) && !currentVisualProviderSupported);
   $("synthesize-button").textContent = S.combineBusy
     ? "Combining…"
     : run.mode === "demo"
@@ -507,13 +510,21 @@ function renderCombine() {
         ($("include-images").checked
           ? (currentVisualProviderSupported ? "Selected images are sent for visual inspection. " : "Choose ChatGPT, Gemini or Claude to inspect images. ")
           : "Image bytes stay local. ") +
+        ($("include-pdfs").checked
+          ? (currentVisualProviderSupported ? "Selected PDFs are sent for document inspection. " : "Choose ChatGPT, Gemini or Claude to inspect PDFs. ")
+          : "PDF bytes stay local. ") +
         "Original files stay attached to the draft. API charges apply.";
   $("include-readable-files").disabled = busy();
   $("include-images").disabled = busy() || !selectedImages.length;
+  $("include-pdfs").disabled = busy() || !selectedPdfs.length;
   $("image-synthesis-help").textContent = selectedImages.length
     ? selectedImages.length + " compatible selected image" + (selectedImages.length === 1 ? "" : "s") +
       ". Up to 6 / 8 MB total will be sent when enabled."
     : "No compatible PNG, JPEG or WebP image is attached to the selected answers.";
+  $("pdf-synthesis-help").textContent = selectedPdfs.length
+    ? selectedPdfs.length + " selected PDF" + (selectedPdfs.length === 1 ? "" : "s") +
+      ". Up to 3 / 8 MB total will be sent when enabled."
+    : "No PDF is attached to the selected answers.";
   queueSynthesisPreview(selected);
   $("combined-text").disabled = S.combineBusy;
   $("save-combined").disabled = S.combineBusy || S.combinedDraft === null;
@@ -540,6 +551,7 @@ function queueSynthesisPreview(selected) {
     direction: $("combine-direction").value,
     includeReadableFiles: $("include-readable-files").checked,
     includeImages: $("include-images").checked,
+    includePdfs: $("include-pdfs").checked,
     provider: $("synth-provider").value,
   };
   const signature = S.run.id + ":" + S.run.updatedAt + ":" + JSON.stringify(request);
@@ -777,6 +789,7 @@ async function combine(method) {
         direction: $("combine-direction").value,
         includeReadableFiles: $("include-readable-files").checked,
         includeImages: $("include-images").checked,
+        includePdfs: $("include-pdfs").checked,
         version: S.run.combined.version,
       },
     });
@@ -1020,6 +1033,10 @@ $("include-readable-files").onchange = () => {
   renderCombine();
 };
 $("include-images").onchange = () => {
+  S.synthesisPreviewSignature = "";
+  renderCombine();
+};
+$("include-pdfs").onchange = () => {
   S.synthesisPreviewSignature = "";
   renderCombine();
 };

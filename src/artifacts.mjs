@@ -11,6 +11,9 @@ export const MAX_SYNTHESIS_TOTAL_CHARS = 60_000;
 export const MAX_SYNTHESIS_IMAGES = 6;
 export const MAX_SYNTHESIS_IMAGE_BYTES = 4_000_000;
 export const MAX_SYNTHESIS_IMAGE_TOTAL_BYTES = 8_000_000;
+export const MAX_SYNTHESIS_PDFS = 3;
+export const MAX_SYNTHESIS_PDF_BYTES = 4_000_000;
+export const MAX_SYNTHESIS_PDF_TOTAL_BYTES = 8_000_000;
 export const PREVIEW_CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox allow-scripts";
 const types = { html: 'text/html', htm: 'text/html', svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', css: 'text/css', js: 'text/javascript', mjs: 'text/javascript', ts: 'text/x-typescript', tsx: 'text/x-typescript', jsx: 'text/javascript', py: 'text/x-python', json: 'application/json', csv: 'text/csv', md: 'text/markdown', txt: 'text/plain', xml: 'text/xml', yaml: 'text/yaml', yml: 'text/yaml', sql: 'text/plain', sh: 'text/plain', pdf: 'application/pdf', zip: 'application/zip', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm' };
 export function safeName(name = 'output.bin') {
@@ -176,6 +179,31 @@ export function synthesisImageInputs(run, answers, includeImages = false) {
     else if (file.size > MAX_SYNTHESIS_IMAGE_BYTES) exclusionReason = 'image exceeds per-image synthesis limit';
     else if (inputs.length >= MAX_SYNTHESIS_IMAGES) exclusionReason = 'visual synthesis image-count limit reached';
     else if (totalBytes + file.size > MAX_SYNTHESIS_IMAGE_TOTAL_BYTES) exclusionReason = 'visual synthesis total-byte limit reached';
+    if (exclusionReason) { decisions.set(file.id, { included: false, exclusionReason }); continue; }
+    inputs.push({ artifactId: file.id, name: file.name, mimeType: file.mimeType,
+      size: file.size, data: file.data, sourceLabel: answer.label });
+    totalBytes += file.size;
+    decisions.set(file.id, { included: true });
+  }
+  return { inputs, decisions, totalBytes };
+}
+export function synthesisPdfInputs(run, answers, includePdfs = false) {
+  const seen = new Set(), inputs = [], decisions = new Map();
+  let totalBytes = 0;
+  for (const answer of answers) for (const file of artifactsFor(run, answer)) {
+    if (seen.has(file.id)) continue;
+    seen.add(file.id);
+    if (!includePdfs || file.mimeType !== 'application/pdf') continue;
+    let exclusionReason = '';
+    if (file.encoding !== 'base64') exclusionReason = 'PDF bytes unavailable';
+    else if (file.size > MAX_SYNTHESIS_PDF_BYTES) exclusionReason = 'PDF exceeds per-document synthesis limit';
+    else {
+      const bytes = Buffer.from(file.data, 'base64');
+      if (!bytes.subarray(0, 1024).includes(Buffer.from('%PDF-')))
+        exclusionReason = 'file does not contain a PDF signature';
+      else if (inputs.length >= MAX_SYNTHESIS_PDFS) exclusionReason = 'PDF synthesis document-count limit reached';
+      else if (totalBytes + file.size > MAX_SYNTHESIS_PDF_TOTAL_BYTES) exclusionReason = 'PDF synthesis total-byte limit reached';
+    }
     if (exclusionReason) { decisions.set(file.id, { included: false, exclusionReason }); continue; }
     inputs.push({ artifactId: file.id, name: file.name, mimeType: file.mimeType,
       size: file.size, data: file.data, sourceLabel: answer.label });

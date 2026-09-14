@@ -53,6 +53,25 @@ export function createOutputViewer({ offline = false } = {}) {
     }
     body.append(frame);
   }
+  function bundlePreview() {
+    cleanup(); note.hidden = false;
+    const preview = file.appPreview;
+    if (preview?.status !== 'ready') {
+      const p = document.createElement('p');
+      p.textContent = preview?.error || 'This project cannot be previewed. Inspect its manifest or download the original archive.';
+      body.append(p); return;
+    }
+    const frame = document.createElement('iframe'); frame.title = 'Isolated bundled app preview';
+    frame.setAttribute('sandbox', 'allow-scripts'); frame.referrerPolicy = 'no-referrer';
+    if (offline) {
+      const csp = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+      frame.src = urlFor('<!doctype html><meta http-equiv="Content-Security-Policy" content="' + csp + '">' + preview.html, 'text/html');
+    } else {
+      frame.src = '/artifact-preview.html';
+      frame.addEventListener('load', () => frame.contentWindow.postMessage({ type: 'prism-preview', html: preview.html }, '*'), { once: true });
+    }
+    body.append(frame);
+  }
   function bundleManifest() {
     cleanup(); note.hidden = true;
     const bundle = file.appBundle, intro = document.createElement('p');
@@ -85,14 +104,14 @@ export function createOutputViewer({ offline = false } = {}) {
   dialog.querySelector('[data-close]').onclick = () => dialog.close();
   dialog.addEventListener('close', () => { cleanup(); restoreFocus?.focus?.({ preventScroll: true }); });
   dialog.querySelector('[data-source]').onclick = source;
-  dialog.querySelector('[data-run]').onclick = preview;
+  dialog.querySelector('[data-run]').onclick = () => file.appBundle ? bundlePreview() : preview();
   dialog.querySelector('[data-download]').onclick = () => saveOutput(file);
   return { open(next, title = next.name) {
     file = next; restoreFocus = document.activeElement; cleanup(); note.hidden = true;
     dialog.querySelector('h2').textContent = title;
     dialog.querySelector('.quiet').textContent = outputKind(file) + ' · ' + file.mimeType;
     dialog.querySelector('[data-source]').hidden = !['HTML / app', 'Text / code'].includes(outputKind(file)) && file.mimeType !== 'image/svg+xml';
-    dialog.querySelector('[data-run]').hidden = file.mimeType !== 'text/html';
+    dialog.querySelector('[data-run]').hidden = file.mimeType !== 'text/html' && file.appPreview?.status !== 'ready';
     const kind = outputKind(file);
     if (kind === 'App bundle') bundleManifest();
     else if (['HTML / app', 'Text / code'].includes(kind)) source();

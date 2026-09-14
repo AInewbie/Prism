@@ -1,17 +1,28 @@
 # Prism — model comparison studio
 
-**Version 0.9.0 · safe multi-file app inspection · 14 September 2026**
+**Version 0.10.0 · isolated static app-bundle previews · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
 
-## New: inspect and compare multi-file apps
+## New: preview self-contained multi-file web apps
+
+Prism can now run a compatible ZIP web app from its `index.html` inside the same
+network-blocked, origin-isolated sandbox used for single-file HTML. Local classic
+scripts, stylesheets, images, audio and video referenced by the entry point are
+inlined in memory under a 2 MB preview budget. The ZIP is never extracted to disk,
+installed or run on the server. Dynamic imports, build steps, backends and external
+resources remain unavailable, and unsupported bundles keep their manifest and
+original download.
+
+## Inspect and compare multi-file apps
 
 Attach a generated ZIP project and choose **Inspect** to review its file tree,
 likely entry points, expanded size and readable-source count. Prism parses the
-archive in memory for metadata only: it never extracts, installs or runs the
-project. Unsafe paths, encrypted entries, unsupported compression, ZIP64 and
+archive in memory for metadata only: inspection never extracts, installs or runs
+the project; execution requires the separate isolated-preview action. Unsafe
+paths, encrypted entries, unsupported compression, ZIP64 and
 oversized archives are excluded or blocked.
 
 In **Combined answer**, enable **Include readable source from ZIP app bundles**
@@ -95,8 +106,9 @@ Open [the HTML demo](demo/Prism-demo.html), compare the samples, inspect
 **tiny-counter.html → Run preview**, and try the app. No setup or compilation.
 The full standalone/browser app also needs no dependency installation.
 
-Documents and multi-file app ZIPs download without running; ZIP structure can
-now be inspected safely and bounded source can be sent only after explicit opt-in. PDFs can be
+Documents and multi-file app ZIPs remain downloadable; compatible static ZIP apps
+can be inspected and explicitly run in an isolated preview, and bounded source can
+be sent only after explicit opt-in. PDFs can be
 passed to a supported synthesizer only after explicit opt-in. xAI image/video
 generation, Claude generated-file retrieval and arbitrary remote file retrieval
 are not enabled. Synthesis always retains selected files and can optionally

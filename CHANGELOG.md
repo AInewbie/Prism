@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.10.0 — 14 September 2026 · isolated static app-bundle previews
+
+- Run compatible self-contained ZIP web apps from a safe `index.html` entry in
+  the existing origin-isolated, network-blocked preview iframe.
+- Inline bounded local classic scripts, stylesheets, images, audio and video in
+  memory; keep external resources, dynamic imports, build steps and servers off.
+- Refuse previews for unsafe paths, encrypted entries, unsupported compression,
+  missing entry points or preview data over the 2 MB expanded budget.
+- Keep ZIP archives inert until the user explicitly selects **Run preview**;
+  never extract, install or execute project contents on the server.
+- Preserve v0.9 manifests, bounded source synthesis, exact downloads, history,
+  exports and all earlier text, image, PDF, audio and video behavior.
+- Verify 48 automated tests plus desktop, phone, offline-demo, browser-login and
+  native-widget workflows. No provider call, charge, merge or deployment.
+
 ## 0.9.0 — 14 September 2026 · safe multi-file app inspection
 
 - Inspect ZIP project structure, likely entry points, file types and declared

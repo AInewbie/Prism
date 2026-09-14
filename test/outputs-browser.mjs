@@ -73,6 +73,11 @@ for (const width of [1440, 412]) {
     assert.match(await dialog.innerText(), /Nothing was extracted or executed/);
     assert.match(await dialog.innerText(), /src\/app\.js/);
     await page.screenshot({ path: resolve(output, width + '-app-bundle-manifest.png'), fullPage: false });
+    await dialog.getByRole('button', { name: 'Run preview', exact: true }).click();
+    frame = page.frameLocator('.output-preview iframe');
+    assert.equal(await frame.locator('#app').innerText(), 'Bundle ready');
+    assert.equal(await dialog.locator('iframe').getAttribute('sandbox'), 'allow-scripts');
+    await page.screenshot({ path: resolve(output, width + '-app-bundle-preview.png'), fullPage: false });
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Inspect opaque-output.dat', exact: true }).click();
     assert.match(await dialog.innerText(), /Original attachment preserved/);
@@ -153,6 +158,6 @@ for (const width of [1440, 412]) {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: resolve(output, width + '-visual-output-mode.png'), fullPage: true });
     assert.deepEqual(errors, []);
-    console.log(width + 'px: image preview, interactive app, isolated scripts, app-bundle manifest/source synthesis, exact downloads, attachment upload, combined files, visual synthesis, ZIP and reload passed.');
+    console.log(width + 'px: image preview, interactive single-file and ZIP apps, isolated scripts, app-bundle manifest/source synthesis, exact downloads, attachment upload, combined files, visual synthesis, ZIP and reload passed.');
   } finally { await browser.close(); await app.close(); await rm(directory, { recursive: true, force: true }); }
 }

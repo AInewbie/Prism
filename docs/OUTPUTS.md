@@ -1,4 +1,4 @@
-# Mixed outputs · Prism 0.9.0
+# Mixed outputs · Prism 0.10.0
 
 An answer is now text plus output files. Compare and score the whole answer,
 select it for a combined draft, and keep the original files with that draft.
@@ -33,7 +33,7 @@ version so a later edit cannot invalidate a saved draft's references.
 | Audio / video | Native browser player when the MIME type and codec are supported; original download |
 | PDF | Preserved and downloadable; optional bounded native-model inspection during synthesis; no local rendering, extraction or execution |
 | Word, Excel, PowerPoint and other binary files | Preserved as attachments and downloadable; no office-document rendering or understanding in this version |
-| ZIP / multi-file app projects | Original archive preserved; safe in-memory manifest inspection and optional bounded readable-source synthesis; never unpacked to disk, installed or executed |
+| ZIP / multi-file app projects | Original archive preserved; safe manifest inspection, optional bounded source synthesis, and isolated preview for compatible self-contained static web apps |
 | Provider-hosted file references | Metadata retained with **Not downloaded**; attach the actual downloaded file for preview/export |
 
 ### Provider coverage
@@ -87,7 +87,7 @@ blocks. The exact preview shows PDF names, sizes and source labels without base6
 Grok, SVG and every other binary format remain metadata-only. Included source,
 images and PDFs are explicitly untrusted and are never executed. Files stay
 beside the combined text; Prism compares project structure and source but is not
-a video, office-document or executable app-merging engine.
+a video, office-document or functional app-merging engine.
 
 - **Download** gets one exact original file.
 - **Export files ZIP** contains `comparison.md`, a metadata `manifest.json`
@@ -124,7 +124,7 @@ Providers never receive a file just because it was previewed or downloaded.
 - File-limit failures preserve received answer text and report omitted files.
 - Source preview displays at most 200,000 characters; downloads retain the full file.
 
-Generated HTML starts as inert source. **Run preview** creates an iframe with
+Generated HTML and compatible ZIP web apps start inert. **Run preview** creates an iframe with
 `sandbox="allow-scripts"` and no same-origin, form, popup, download or top-navigation
 permission. Its response CSP separately blocks network requests, external
 resources and nested frames; the parent restricts frame navigation to its own
@@ -135,6 +135,12 @@ The offline demo applies equivalent iframe restrictions and no-network policies.
 Downloads are original files; opening them outside Prism uses the destination
 application's normal permissions. CPU-heavy app code can still make its browser
 tab unresponsive; this is not a resource-metered code runner.
+
+For ZIP previews, Prism chooses the shallowest `index.html` or `index.htm`, then
+inlines referenced classic scripts, stylesheets and browser media in memory. The
+preview budget is 2 MB expanded data, with a 1 MB limit per entry. Bundles containing
+unsafe paths, encrypted entries or unsupported compression are not runnable.
+Network resources, module imports, build pipelines and server APIs remain blocked.
 
 ## Extend the output model
 
@@ -157,8 +163,8 @@ PRISM_TEST_BROWSER_GATEWAY=1 npm run test:browser
 ```
 
 Tests use disposable synthetic workspaces and fixture files, no paid API calls.
-The output suite exercises app interactions, app-bundle manifests and source
-synthesis, parent/storage/API/network isolation,
+The output suite exercises app interactions, isolated static ZIP previews,
+app-bundle manifests and source synthesis, parent/storage/API/network isolation,
 image preview, attachment upload over the old request limit, exact file downloads,
 combined files, ZIP export and reload at desktop/phone widths. Unit/API tests
 also check all adapters, native multimodal synthesis payloads, visual-input

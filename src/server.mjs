@@ -1,4 +1,5 @@
 import { fileArtifact, addArtifacts, addProviderArtifacts, presentRun, UPLOAD_BYTES, PREVIEW_CSP } from './artifacts.mjs';
+import { appBundlePreview } from './app-bundles.mjs';
 import { zipFiles } from './zip.mjs';
 import { sampleFiles } from '../public/artifact-samples.js';
 import { createServer } from "node:http";
@@ -120,7 +121,7 @@ export function createApp({
         return reply(res, 200, {
           providers: PROVIDERS,
           connections: store.connections(),
-          version: "0.9.0",
+          version: "0.10.0",
         });
       const connectionMatch = path.match(
         /^\/api\/connections\/(openai|gemini|grok|claude)$/,
@@ -163,7 +164,9 @@ export function createApp({
         if (req.method === 'GET' && fileId) {
           const artifact = store.get(runId).artifacts?.find(f => f.id === fileId);
           if (!artifact) throw new AppError('File not found.', 404);
-          return reply(res, 200, { artifact });
+          const appPreview = artifact.appBundle && artifact.encoding === 'base64'
+            ? appBundlePreview(Buffer.from(artifact.data, 'base64')) : undefined;
+          return reply(res, 200, { artifact: appPreview ? { ...artifact, appPreview } : artifact });
         }
         if (req.method === 'POST' && !fileId) {
           const request = await body(req, UPLOAD_BYTES);
@@ -194,7 +197,7 @@ export function createApp({
           "format",
         );
         if (format === 'zip') {
-          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.9.0', run: presentRun(run) }, null, 2)]];
+          const entries = [['comparison.md', exportMarkdown(run)], ['manifest.json', JSON.stringify({ application: 'Prism', version: '0.10.0', run: presentRun(run) }, null, 2)]];
           for (const file of run.artifacts || []) if (file.encoding === 'base64') entries.push(['files/' + file.id + '/' + file.name, Buffer.from(file.data, 'base64')]);
           return reply(res, 200, zipFiles(entries), 'application/zip');
         }
@@ -205,7 +208,7 @@ export function createApp({
             exportMarkdown(run),
             "text/markdown; charset=utf-8",
           );
-        return reply(res, 200, { application: "Prism", version: "0.9.0", run });
+        return reply(res, 200, { application: "Prism", version: "0.10.0", run });
       }
       if (action === "stop" && req.method === "POST") {
         for (const [key, controller] of active)
@@ -541,7 +544,7 @@ if (
     process.exitCode = 1;
   });
   app.server.listen(port, "127.0.0.1", () => {
-    console.log("Prism 0.9.0 — local model comparison studio");
+    console.log("Prism 0.10.0 — local model comparison studio");
     console.log("Open: http://127.0.0.1:" + port + "/#key=" + app.token);
     console.log("Keep this terminal open. Press Ctrl+C to stop.");
   });

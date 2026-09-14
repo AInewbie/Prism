@@ -4,6 +4,7 @@ export const MAX_APP_BUNDLE_ENTRIES = 200;
 export const MAX_APP_BUNDLE_EXPANDED_BYTES = 20_000_000;
 export const MAX_APP_SOURCE_ENTRY_BYTES = 1_000_000;
 export const MAX_SYNTHESIS_APP_BUNDLES = 3;
+export const MAX_APP_PREVIEW_BYTES = 2_000_000;
 
 const EOCD = 0x06054b50, CENTRAL = 0x02014b50, LOCAL = 0x04034b50;
 const sourceExtensions = new Set([
@@ -16,6 +17,9 @@ const mimeByExtension = {
   py: 'text/x-python', sh: 'text/plain', sql: 'text/plain', svg: 'image/svg+xml',
   ts: 'text/x-typescript', tsx: 'text/x-typescript', txt: 'text/plain', xml: 'text/xml',
   yaml: 'text/yaml', yml: 'text/yaml',
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp',
+  avif: 'image/avif', mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg',
+  mp4: 'video/mp4', webm: 'video/webm',
 };
 
 function blocked(message) {
@@ -111,6 +115,78 @@ function entryBytes(parsed, entry) {
   });
   if (output.length !== entry.size) throw Error('expanded size mismatch');
   return output;
+}
+
+function previewBlocked(message) {
+  return { status: 'blocked', error: message, entryPoint: null, resourcesInlined: 0 };
+}
+
+function localReference(reference, entryPoint) {
+  const value = String(reference || '').trim();
+  if (!value || value.startsWith('#') || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value)) return null;
+  try {
+    const base = new URL(entryPoint, 'https://prism.invalid/');
+    const resolved = new URL(value, base);
+    if (resolved.origin !== 'https://prism.invalid') return null;
+    return decodeURIComponent(resolved.pathname.slice(1));
+  } catch { return null; }
+}
+
+function dataUrl(bytes, mimeType) {
+  return 'data:' + mimeType + ';base64,' + bytes.toString('base64');
+}
+
+export function appBundlePreview(bytes) {
+  let parsed;
+  try { parsed = parse(bytes); }
+  catch (error) { return previewBlocked('Archive could not be previewed safely: ' + error.message + '.'); }
+  if (parsed.files.some(file => !file.safe || file.encrypted || file.compression === 'unsupported'))
+    return previewBlocked('Preview is disabled because the archive contains an unsafe, encrypted or unsupported entry.');
+  const entry = parsed.files.filter(file => /(^|\/)index\.html?$/i.test(file.path))
+    .sort((a, b) => a.path.split('/').length - b.path.split('/').length || a.path.localeCompare(b.path))[0];
+  if (!entry) return previewBlocked('Preview needs a safe index.html or index.htm entry.');
+  if (entry.size > MAX_APP_SOURCE_ENTRY_BYTES) return previewBlocked('The app entry point exceeds the 1 MB preview limit.');
+  const files = new Map(parsed.files.map(file => [file.path, file]));
+  let total = entry.size, resourcesInlined = 0;
+  const read = (reference, from = entry.path) => {
+    const path = localReference(reference, from), file = path && files.get(path);
+    if (!file || file.size > MAX_APP_SOURCE_ENTRY_BYTES || total + file.size > MAX_APP_PREVIEW_BYTES) return null;
+    try {
+      const content = entryBytes(parsed, file);
+      total += file.size; resourcesInlined++;
+      return { content, file };
+    } catch { return null; }
+  };
+  const rewriteCss = (css, from) => css.replace(/url\(\s*(['"]?)([^'"\)]+)\1\s*\)/gi, (all, _quote, reference) => {
+    const asset = read(reference, from);
+    return asset ? 'url("' + dataUrl(asset.content, asset.file.mimeType) + '")' : all;
+  });
+  let html;
+  try { html = new TextDecoder('utf-8', { fatal: true }).decode(entryBytes(parsed, entry)); }
+  catch { return previewBlocked('The app entry point is not valid UTF-8 HTML.'); }
+  html = html.replace(/<script\b([^>]*)\bsrc\s*=\s*(['"])(.*?)\2([^>]*)><\/script\s*>/gi,
+    (all, before, _quote, reference, after) => {
+      const asset = read(reference);
+      if (!asset || !/^(?:text\/javascript|application\/javascript)$/.test(asset.file.mimeType)) return all;
+      const source = asset.content.toString('utf8').replace(/<\/script/gi, '<\\/script');
+      return '<script' + before + after + ' data-prism-source="' + asset.file.path.replaceAll('"', '&quot;') + '">' + source + '</script>';
+    });
+  html = html.replace(/<link\b[^>]*>/gi, (tag) => {
+    const rel = tag.match(/\brel\s*=\s*(['"])(.*?)\1/i)?.[2] || '';
+    const reference = tag.match(/\bhref\s*=\s*(['"])(.*?)\1/i)?.[2];
+    if (!/\bstylesheet\b/i.test(rel) || !reference) return tag;
+    const asset = read(reference);
+    if (!asset || asset.file.mimeType !== 'text/css') return tag;
+    return '<style data-prism-source="' + asset.file.path.replaceAll('"', '&quot;') + '">' +
+      rewriteCss(asset.content.toString('utf8'), asset.file.path).replace(/<\/style/gi, '<\\/style') + '</style>';
+  });
+  html = html.replace(/<(img|audio|video|source)\b[^>]*>/gi, (tag) =>
+    tag.replace(/\b(src|poster)\s*=\s*(['"])(.*?)\2/gi, (attribute, name, quote, reference) => {
+      const asset = read(reference);
+      return asset ? name + '=' + quote + dataUrl(asset.content, asset.file.mimeType) + quote : attribute;
+    }));
+  return { status: 'ready', entryPoint: entry.path, resourcesInlined, expandedBytesIncluded: total, html,
+    limitations: ['Network requests and external resources are blocked.', 'Dynamic imports, build steps and server features are unavailable.'] };
 }
 
 export function appBundleSources(bytes, budget) {

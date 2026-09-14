@@ -1,5 +1,6 @@
 import { providerArtifacts, MAX_SYNTHESIS_IMAGES, MAX_SYNTHESIS_IMAGE_BYTES,
-  MAX_SYNTHESIS_IMAGE_TOTAL_BYTES } from './artifacts.mjs';
+  MAX_SYNTHESIS_IMAGE_TOTAL_BYTES, MAX_SYNTHESIS_PDFS, MAX_SYNTHESIS_PDF_BYTES,
+  MAX_SYNTHESIS_PDF_TOTAL_BYTES } from './artifacts.mjs';
 import { AppError, provider, modelId } from "./core.mjs";
 const bases = {
   openai: "https://api.openai.com/v1",
@@ -87,6 +88,24 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
     throw new AppError('Visual synthesis inputs exceed the total size limit.');
   if (images.length && !['openai', 'gemini', 'claude'].includes(id))
     throw new AppError('Visual synthesis is available with ChatGPT, Gemini or Claude.');
+  const pdfs = options.pdfs || [];
+  if (!Array.isArray(pdfs)) throw new AppError('Invalid PDF synthesis inputs.');
+  if (pdfs.length > MAX_SYNTHESIS_PDFS) throw new AppError('Too many PDF synthesis inputs.');
+  let pdfBytes = 0;
+  for (const pdf of pdfs) {
+    if (!pdf || pdf.mimeType !== 'application/pdf' || typeof pdf.name !== 'string' ||
+        typeof pdf.data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(pdf.data) || pdf.data.length % 4 !== 0)
+      throw new AppError('Invalid PDF synthesis input.');
+    const bytes = Buffer.from(pdf.data, 'base64');
+    if (bytes.toString('base64') !== pdf.data || bytes.length > MAX_SYNTHESIS_PDF_BYTES ||
+        !bytes.subarray(0, 1024).includes(Buffer.from('%PDF-')))
+      throw new AppError('Invalid or oversized PDF synthesis input.');
+    pdfBytes += bytes.length;
+  }
+  if (pdfBytes > MAX_SYNTHESIS_PDF_TOTAL_BYTES)
+    throw new AppError('PDF synthesis inputs exceed the total size limit.');
+  if (pdfs.length && !['openai', 'gemini', 'claude'].includes(id))
+    throw new AppError('PDF synthesis is available with ChatGPT, Gemini or Claude.');
   let path, body;
   if (id === "openai" || id === "grok") {
     path = "/responses";
@@ -94,7 +113,9 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
       model,
       input: [
         ...(system ? [{ role: "system", content: system }] : []),
-        { role: "user", content: images.length ? [
+        { role: "user", content: images.length || pdfs.length ? [
+          ...pdfs.map((pdf) => ({ type: 'input_file', filename: pdf.name,
+            file_data: 'data:application/pdf;base64,' + pdf.data, detail: 'auto' })),
           { type: 'input_text', text: prompt },
           ...images.map((image) => ({ type: 'input_image',
             image_url: 'data:' + image.mimeType + ';base64,' + image.data,
@@ -109,7 +130,7 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
       } : {}),
     };
   } else if (id === "gemini") {
-    if (outputMode === 'visual' || images.length) {
+    if (outputMode === 'visual' || (images.length && !pdfs.length)) {
       path = '/interactions';
       body = {
         model: outputMode === 'visual' ? modelId(options.imageModel) : model,
@@ -122,7 +143,11 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
     } else {
       path = "/models/" + encodeURIComponent(model) + ":generateContent";
       body = {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [
+          ...pdfs.map((pdf) => ({ inlineData: { mimeType: 'application/pdf', data: pdf.data } })),
+          ...images.map((image) => ({ inlineData: { mimeType: image.mimeType, data: image.data } })),
+          { text: prompt },
+        ] }],
         ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
         generationConfig: { maxOutputTokens: maxTokens },
       };
@@ -131,7 +156,9 @@ export function requestSpec(id, key, model, system, prompt, maxTokens, options =
     path = "/messages";
     body = {
       model,
-      messages: [{ role: "user", content: images.length ? [
+      messages: [{ role: "user", content: images.length || pdfs.length ? [
+        ...pdfs.map((pdf) => ({ type: 'document', source: { type: 'base64',
+          media_type: 'application/pdf', data: pdf.data }, title: pdf.name })),
         ...images.map((image) => ({ type: 'image', source: { type: 'base64',
           media_type: image.mimeType, data: image.data } })),
         { type: 'text', text: prompt },

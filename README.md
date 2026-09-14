@@ -1,10 +1,24 @@
 # Prism — model comparison studio
 
-**Version 0.7.0 · bounded visual synthesis · 14 September 2026**
+**Version 0.8.0 · bounded PDF synthesis · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
+
+## New: synthesize selected PDFs
+
+In **Combined answer**, enable **Let the synthesizer inspect PDFs** to send PDF
+attachments from the selected answers to ChatGPT, Gemini or Claude using each
+provider's native document-input format. The option is off by default, and Grok
+is blocked until its document-input contract is implemented and verified.
+
+Prism sends at most 3 PDFs, no more than 4 MB each and 8 MB total. The exact
+synthesis preview lists names, sizes, source labels and exclusions without
+returning base64 bytes to the browser. PDFs are treated as untrusted documents;
+instructions found inside them must not be followed. The saved combined draft
+records whether PDF inspection was used. Prism preserves the original download
+but does not execute, render or extract the PDF locally.
 
 ## New: visually synthesize selected images
 
@@ -33,6 +47,7 @@ Prism includes at most 12 readable files, 20,000 characters per file and 60,000
 characters total. It marks every truncation and exclusion in the preview.
 Audio, video, archives, office documents, invalid UTF-8 and provider references
 remain metadata-only. Images stay metadata-only unless visual inspection is
+separately enabled; PDFs stay metadata-only unless document inspection is
 separately enabled. Included source is labelled as untrusted data
 and is never executed during synthesis. The saved combined draft records whether
 bounded readable contents were used.
@@ -64,11 +79,12 @@ Open [the HTML demo](demo/Prism-demo.html), compare the samples, inspect
 **tiny-counter.html → Run preview**, and try the app. No setup or compilation.
 The full standalone/browser app also needs no dependency installation.
 
-Documents and multi-file app ZIPs download without running; xAI image/video
+Documents and multi-file app ZIPs download without running; PDFs can now be
+passed to a supported synthesizer only after explicit opt-in. xAI image/video
 generation, Claude generated-file retrieval and arbitrary remote file retrieval
 are not enabled. Synthesis always retains selected files and can optionally
-receive bounded readable source; binary/image contents are not sent. Files are
-limited to 4 MB each.
+receive bounded readable source, images and PDFs. Other binary contents are not
+sent. Files are limited to 4 MB each.
 See [supported outputs, limits and verification](docs/OUTPUTS.md).
 
 ## Find saved comparisons

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.0 — 14 September 2026 · bounded PDF synthesis
+
+- Add a separate, default-off choice to send PDF attachments from selected
+  answers to the synthesis model for text-and-page understanding.
+- Use native PDF input blocks for OpenAI Responses, Gemini generateContent and
+  Claude Messages. Block Grok before a call when PDF inspection is enabled.
+- Cap disclosure at 3 PDFs, 4 MB each and 8 MB decoded total; require a PDF
+  signature and mark included or excluded documents in the exact preview.
+- Keep PDF base64 bytes out of the browser preview while showing names, sizes,
+  types and source labels. Treat PDFs as untrusted documents and record the
+  document-input mode with each saved combined draft.
+- Preserve existing sessions, attachments, image/source synthesis, exports,
+  credentials and metadata-only defaults. No local PDF execution or extraction.
+- Verify 44 automated tests, including fixture-only PDF dispatch, plus desktop
+  and phone rich-output workflows. No
+  live provider call, charge, merge, deployment or physical Samsung test was
+  performed.
+
 ## 0.7.0 — 14 September 2026 · bounded visual synthesis
 
 - Add a separate, default-off choice to send compatible images from selected

@@ -59,7 +59,8 @@ for (const width of [1440, 412]) {
     assert.equal(await readFile(await downloaded.path(), 'utf8'), 'answer,accuracy,usefulness,clarity\nA,,,\nB,,,\nC,,,\nD,,,\n');
     const uploaded = page.waitForResponse(r => r.url().endsWith('/artifacts') && r.request().method() === 'POST');
     await page.locator('[data-attach="openai"]').setInputFiles([{ name: 'isolation-check.html', mimeType: 'text/html', buffer: Buffer.from(hostile) },
-      { name: 'opaque-output.dat', mimeType: 'application/octet-stream', buffer: Buffer.alloc(900000, 42) }]);
+      { name: 'opaque-output.dat', mimeType: 'application/octet-stream', buffer: Buffer.alloc(900000, 42) },
+      { name: 'evidence.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% browser fixture\n%%EOF') }]);
     assert.equal((await uploaded).status(), 201);
     await page.getByRole('button', { name: 'Inspect opaque-output.dat', exact: true }).click();
     assert.match(await dialog.innerText(), /Original attachment preserved/);
@@ -87,15 +88,22 @@ for (const width of [1440, 412]) {
     const synthesisPreview = await page.locator('#synthesis-preview').innerText();
     assert.match(synthesisPreview, /Isolation check/);
     assert.match(synthesisPreview, /binary or unsupported type/);
+    assert.equal(await page.locator('#include-pdfs').isEnabled(), true);
+    await page.locator('#include-pdfs').check();
+    await page.locator('#synthesis-preview').filter({ hasText: 'bounded-inline-pdfs' }).waitFor();
+    const documentPreview = await page.locator('#synthesis-preview').innerText();
+    assert.match(documentPreview, /evidence\.pdf/);
+    assert.ok(!documentPreview.includes(Buffer.from('%PDF-1.4\n% browser fixture\n%%EOF').toString('base64')));
     await page.screenshot({ path: resolve(output, width + '-synthesis-payload.png'), fullPage: true });
     await page.locator('#synthesize-button').click();
-    await page.waitForFunction(() => document.querySelectorAll('#combined-files .output-item').length === 3);
+    await page.waitForFunction(() => document.querySelectorAll('#combined-files .output-item').length === 4);
     assert.match(await page.locator('#combined-meta').innerText(), /readable file contents used/);
+    assert.match(await page.locator('#combined-meta').innerText(), /PDFs inspected/);
     const zipDownload = page.waitForEvent('download'); await page.locator('#export-zip').click();
     assert.ok((await zipDownload).suggestedFilename().endsWith('.zip'));
     await page.reload();
     await page.getByRole('tab', { name: 'Combined answer', exact: true }).click();
-    assert.equal(await page.locator('#combined-files .output-item').count(), 3);
+    assert.equal(await page.locator('#combined-files .output-item').count(), 4);
     await page.locator('#new-comparison').click();
     await page.locator('.advanced > summary').click();
     await page.locator('#output-mode').selectOption('visual');

@@ -180,6 +180,26 @@ test("visual requests use explicit provider image contracts and preserve image-o
     /does not support image output/,
   );
 });
+test("visual synthesis uses native image inputs for ChatGPT, Gemini and Claude", () => {
+  const image = { name: 'chart.png', mimeType: 'image/png', size: 3,
+    data: Buffer.from('png').toString('base64'), sourceLabel: 'A' };
+  const openai = JSON.parse(requestSpec('openai', 'secret', 'vision-model', 'System', 'Payload', 1024,
+    { images: [image] }).init.body);
+  assert.deepEqual(openai.input[1].content.map((part) => part.type), ['input_text', 'input_image']);
+  assert.match(openai.input[1].content[1].image_url, /^data:image\/png;base64,/);
+  const geminiSpec = requestSpec('gemini', 'secret', 'vision-model', 'System', 'Payload', 1024,
+    { images: [image] });
+  const gemini = JSON.parse(geminiSpec.init.body);
+  assert.ok(geminiSpec.url.endsWith('/interactions'));
+  assert.deepEqual(gemini.input.map((part) => part.type), ['text', 'image']);
+  assert.equal(gemini.input[1].data, image.data);
+  const claude = JSON.parse(requestSpec('claude', 'secret', 'vision-model', 'System', 'Payload', 1024,
+    { images: [image] }).init.body);
+  assert.deepEqual(claude.messages[0].content.map((part) => part.type), ['image', 'text']);
+  assert.equal(claude.messages[0].content[0].source.data, image.data);
+  assert.throws(() => requestSpec('grok', 'secret', 'model', '', 'Payload', 1024,
+    { images: [image] }), /ChatGPT, Gemini or Claude/);
+});
 test("visual comparisons require capable providers and separate image models without changing text defaults", () => {
   const connection = { hasKey: true, model: "text-model", imageModel: "image-model" };
   const run = makeRun(
@@ -659,7 +679,12 @@ test("live visual comparison dispatches provider-specific requests and saves ret
   const image = Buffer.from("fixture-image").toString("base64");
   const { call } = await boot(t, {
     fetcher: async (url, options) => {
-      seen.push({ url, body: JSON.parse(options.body) });
+      const body = JSON.parse(options.body);
+      seen.push({ url, body });
+      if (url.endsWith('/responses') && !body.tools)
+        return Response.json({ status: 'completed', output: [{ type: 'message', content: [
+          { type: 'output_text', text: 'Visual synthesis fixture' },
+        ] }] });
       return url.includes("googleapis")
         ? Response.json({ steps: [{ type: "model_output", content: [
             { type: "text", text: "Gemini visual" },
@@ -697,6 +722,29 @@ test("live visual comparison dispatches provider-specific requests and saves ret
     seen.find((request) => request.url.endsWith("/interactions")).body.response_format,
     [{ type: "text" }, { type: "image" }],
   );
+  for (const response of run.responses)
+    await call('/runs/' + run.id + '/review', 'PATCH', {
+      provider: response.provider, version: response.reviewVersion,
+      scores: { accuracy: 4, usefulness: 5, clarity: 4 }, selected: true,
+    });
+  const preview = await call('/runs/' + run.id + '/synthesis-preview', 'POST', {
+    providers: run.responses.map((response) => response.provider), direction: 'Compare the visuals',
+    includeImages: true, provider: 'openai',
+  });
+  assert.equal(preview.status, 200);
+  assert.equal(preview.body.payload.imageInputPolicy.includedImages.length, 2);
+  assert.ok(!JSON.stringify(preview.body).includes(image.data));
+  const combined = await call('/runs/' + run.id + '/combine', 'POST', {
+    providers: run.responses.map((response) => response.provider), method: 'synthesize',
+    provider: 'openai', direction: 'Compare the visuals', includeImages: true, version: 0,
+  });
+  assert.equal(combined.status, 200);
+  assert.equal(combined.body.run.combined.imageContentMode, 'bounded-inline-images');
+  const synthesisRequest = seen.find((request) => request.url.endsWith('/responses') && !request.body.tools);
+  assert.equal(synthesisRequest.body.input[1].content.filter((part) => part.type === 'input_image').length, 2);
+  assert.equal((await call('/runs/' + run.id + '/synthesis-preview', 'POST', {
+    providers: [run.responses[0].provider], includeImages: true, provider: 'grok',
+  })).status, 400);
 });
 test("stop cancels an in-flight request without automatic replay", async (t) => {
   let calls = 0;

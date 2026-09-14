@@ -430,7 +430,9 @@ function renderCombine() {
   const run = S.run,
     selected = run.responses.filter(
       (r) => r.selected && r.status === "complete",
-    );
+    ),
+    selectedImages = selected.flatMap((r) => runFiles(r)).filter((file) =>
+      ['image/png', 'image/jpeg', 'image/webp'].includes(file.mimeType));
   $("combine-sources").innerHTML = run.responses
     .filter((r) => r.status === "complete")
     .map(
@@ -466,10 +468,12 @@ function renderCombine() {
     )
     .join("");
   if (prior) $("synth-provider").value = prior;
+  const currentVisualProviderSupported = ['openai', 'gemini', 'claude'].includes($("synth-provider").value);
   if (S.combinedDraft === null) $("combined-text").value = run.combined.text;
   $("combined-meta").textContent = run.combined.method
     ? run.combined.method + " · Sources " + run.combined.sources.join(", ") +
-      (run.combined.fileContentMode === "bounded-readable-text" ? " · readable file contents used" : "")
+      (run.combined.fileContentMode === "bounded-readable-text" ? " · readable file contents used" : "") +
+      (run.combined.imageContentMode === "bounded-inline-images" ? " · images visually inspected" : "")
     : "An editable space for the strongest ideas.";
   $("combined-save-state").textContent =
     S.combinedDraft !== null
@@ -486,7 +490,8 @@ function renderCombine() {
     busy() ||
     !selected.length ||
     S.combinedDraft !== null ||
-    Object.keys(S.notes).length > 0;
+    Object.keys(S.notes).length > 0 ||
+    ($("include-images").checked && !currentVisualProviderSupported);
   $("synthesize-button").textContent = S.combineBusy
     ? "Combining…"
     : run.mode === "demo"
@@ -499,8 +504,16 @@ function renderCombine() {
         p($("synth-provider").value)?.name +
         ". Sends answer text, scores, notes and file metadata" +
         ($("include-readable-files").checked ? ", plus the readable file contents shown below. " : ". File contents stay local. ") +
+        ($("include-images").checked
+          ? (currentVisualProviderSupported ? "Selected images are sent for visual inspection. " : "Choose ChatGPT, Gemini or Claude to inspect images. ")
+          : "Image bytes stay local. ") +
         "Original files stay attached to the draft. API charges apply.";
   $("include-readable-files").disabled = busy();
+  $("include-images").disabled = busy() || !selectedImages.length;
+  $("image-synthesis-help").textContent = selectedImages.length
+    ? selectedImages.length + " compatible selected image" + (selectedImages.length === 1 ? "" : "s") +
+      ". Up to 6 / 8 MB total will be sent when enabled."
+    : "No compatible PNG, JPEG or WebP image is attached to the selected answers.";
   queueSynthesisPreview(selected);
   $("combined-text").disabled = S.combineBusy;
   $("save-combined").disabled = S.combineBusy || S.combinedDraft === null;
@@ -526,6 +539,8 @@ function queueSynthesisPreview(selected) {
     providers: selected.map((r) => r.provider),
     direction: $("combine-direction").value,
     includeReadableFiles: $("include-readable-files").checked,
+    includeImages: $("include-images").checked,
+    provider: $("synth-provider").value,
   };
   const signature = S.run.id + ":" + S.run.updatedAt + ":" + JSON.stringify(request);
   if (signature === S.synthesisPreviewSignature) return;
@@ -761,6 +776,7 @@ async function combine(method) {
         provider: $("synth-provider").value,
         direction: $("combine-direction").value,
         includeReadableFiles: $("include-readable-files").checked,
+        includeImages: $("include-images").checked,
         version: S.run.combined.version,
       },
     });
@@ -1000,6 +1016,10 @@ $("synthesize-button").onclick = () => combine("synthesize");
 $("synth-provider").onchange = renderCombine;
 $("combine-direction").oninput = renderCombine;
 $("include-readable-files").onchange = () => {
+  S.synthesisPreviewSignature = "";
+  renderCombine();
+};
+$("include-images").onchange = () => {
   S.synthesisPreviewSignature = "";
   renderCombine();
 };

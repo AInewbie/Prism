@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { createBrowserApp } from '../src/browser-server.mjs';
+import { zipFiles } from '../src/zip.mjs';
 
 const { chromium } = await import(process.env.PRISM_PLAYWRIGHT_MODULE || 'playwright');
 const output = resolve(process.env.PRISM_BROWSER_OUTPUT || 'work/outputs'); await mkdir(output, { recursive: true });
@@ -60,8 +61,19 @@ for (const width of [1440, 412]) {
     const uploaded = page.waitForResponse(r => r.url().endsWith('/artifacts') && r.request().method() === 'POST');
     await page.locator('[data-attach="openai"]').setInputFiles([{ name: 'isolation-check.html', mimeType: 'text/html', buffer: Buffer.from(hostile) },
       { name: 'opaque-output.dat', mimeType: 'application/octet-stream', buffer: Buffer.alloc(900000, 42) },
-      { name: 'evidence.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% browser fixture\n%%EOF') }]);
+      { name: 'evidence.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% browser fixture\n%%EOF') },
+      { name: 'candidate-app.zip', mimeType: 'application/zip', buffer: zipFiles([
+        ['index.html', '<main id="app"></main><script src="src/app.js"></script>'],
+        ['src/app.js', 'document.querySelector("#app").textContent="Bundle ready";'],
+        ['assets/data.bin', Buffer.from([0, 1, 2, 3])],
+      ]) }]);
     assert.equal((await uploaded).status(), 201);
+    await page.getByRole('button', { name: 'Inspect candidate-app.zip', exact: true }).click();
+    assert.match(await dialog.innerText(), /3 files/);
+    assert.match(await dialog.innerText(), /Nothing was extracted or executed/);
+    assert.match(await dialog.innerText(), /src\/app\.js/);
+    await page.screenshot({ path: resolve(output, width + '-app-bundle-manifest.png'), fullPage: false });
+    await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Inspect opaque-output.dat', exact: true }).click();
     assert.match(await dialog.innerText(), /Original attachment preserved/);
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
@@ -88,6 +100,12 @@ for (const width of [1440, 412]) {
     const synthesisPreview = await page.locator('#synthesis-preview').innerText();
     assert.match(synthesisPreview, /Isolation check/);
     assert.match(synthesisPreview, /binary or unsupported type/);
+    assert.equal(await page.locator('#include-app-sources').isEnabled(), true);
+    await page.locator('#include-app-sources').check();
+    await page.locator('#synthesis-preview').filter({ hasText: 'bounded-readable-project-sources' }).waitFor();
+    const appPreview = await page.locator('#synthesis-preview').innerText();
+    assert.match(appPreview, /Bundle ready/);
+    assert.ok(!appPreview.includes('UEsDB'));
     assert.equal(await page.locator('#include-pdfs').isEnabled(), true);
     await page.locator('#include-pdfs').check();
     await page.locator('#synthesis-preview').filter({ hasText: 'bounded-inline-pdfs' }).waitFor();
@@ -96,14 +114,15 @@ for (const width of [1440, 412]) {
     assert.ok(!documentPreview.includes(Buffer.from('%PDF-1.4\n% browser fixture\n%%EOF').toString('base64')));
     await page.screenshot({ path: resolve(output, width + '-synthesis-payload.png'), fullPage: true });
     await page.locator('#synthesize-button').click();
-    await page.waitForFunction(() => document.querySelectorAll('#combined-files .output-item').length === 4);
+    await page.waitForFunction(() => document.querySelectorAll('#combined-files .output-item').length === 5);
     assert.match(await page.locator('#combined-meta').innerText(), /readable file contents used/);
+    assert.match(await page.locator('#combined-meta').innerText(), /app source inspected/);
     assert.match(await page.locator('#combined-meta').innerText(), /PDFs inspected/);
     const zipDownload = page.waitForEvent('download'); await page.locator('#export-zip').click();
     assert.ok((await zipDownload).suggestedFilename().endsWith('.zip'));
     await page.reload();
     await page.getByRole('tab', { name: 'Combined answer', exact: true }).click();
-    assert.equal(await page.locator('#combined-files .output-item').count(), 4);
+    assert.equal(await page.locator('#combined-files .output-item').count(), 5);
     await page.locator('#new-comparison').click();
     await page.locator('.advanced > summary').click();
     await page.locator('#output-mode').selectOption('visual');
@@ -134,6 +153,6 @@ for (const width of [1440, 412]) {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: resolve(output, width + '-visual-output-mode.png'), fullPage: true });
     assert.deepEqual(errors, []);
-    console.log(width + 'px: image preview, interactive app, isolated scripts, exact downloads, attachment upload, combined files, visual synthesis, ZIP and reload passed.');
+    console.log(width + 'px: image preview, interactive app, isolated scripts, app-bundle manifest/source synthesis, exact downloads, attachment upload, combined files, visual synthesis, ZIP and reload passed.');
   } finally { await browser.close(); await app.close(); await rm(directory, { recursive: true, force: true }); }
 }

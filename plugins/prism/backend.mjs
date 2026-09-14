@@ -77,6 +77,7 @@ export async function createBackend({ directory, env = process.env, fetcher, tim
         providers: args.providers, method: args.method, direction: args.direction,
         provider: args.provider, version: args.version,
         includeReadableFiles: args.include_readable_files === true,
+        includeAppSources: args.include_app_sources === true,
       });
     },
     setModel(id, model) {

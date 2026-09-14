@@ -1,10 +1,26 @@
 # Prism — model comparison studio
 
-**Version 0.8.0 · bounded PDF synthesis · 14 September 2026**
+**Version 0.9.0 · safe multi-file app inspection · 14 September 2026**
 
 Send one prompt to OpenAI (ChatGPT models through the API), Gemini, Grok and
 Claude. Compare the answers, score them yourself and combine selected answers
 into an editable result. This is a separate application from VolModel.
+
+## New: inspect and compare multi-file apps
+
+Attach a generated ZIP project and choose **Inspect** to review its file tree,
+likely entry points, expanded size and readable-source count. Prism parses the
+archive in memory for metadata only: it never extracts, installs or runs the
+project. Unsafe paths, encrypted entries, unsupported compression, ZIP64 and
+oversized archives are excluded or blocked.
+
+In **Combined answer**, enable **Include readable source from ZIP app bundles**
+to let the synthesizer compare bounded source across selected projects. This is
+separate from the ordinary readable-file option and is off by default. Up to 3
+bundles with 200 entries and 20 MB declared expanded size each may be inspected;
+included source shares the existing 12-file, 20,000-characters-per-file and
+60,000-character total limits. The exact preview shows every included source
+file and exclusion before a call, without exposing archive base64.
 
 ## New: synthesize selected PDFs
 
@@ -45,8 +61,8 @@ will receive before you make the call.
 
 Prism includes at most 12 readable files, 20,000 characters per file and 60,000
 characters total. It marks every truncation and exclusion in the preview.
-Audio, video, archives, office documents, invalid UTF-8 and provider references
-remain metadata-only. Images stay metadata-only unless visual inspection is
+Audio, video, office documents, invalid UTF-8 and provider references remain
+metadata-only. ZIP projects use their own separate source opt-in. Images stay metadata-only unless visual inspection is
 separately enabled; PDFs stay metadata-only unless document inspection is
 separately enabled. Included source is labelled as untrusted data
 and is never executed during synthesis. The saved combined draft records whether
@@ -79,11 +95,12 @@ Open [the HTML demo](demo/Prism-demo.html), compare the samples, inspect
 **tiny-counter.html → Run preview**, and try the app. No setup or compilation.
 The full standalone/browser app also needs no dependency installation.
 
-Documents and multi-file app ZIPs download without running; PDFs can now be
+Documents and multi-file app ZIPs download without running; ZIP structure can
+now be inspected safely and bounded source can be sent only after explicit opt-in. PDFs can be
 passed to a supported synthesizer only after explicit opt-in. xAI image/video
 generation, Claude generated-file retrieval and arbitrary remote file retrieval
 are not enabled. Synthesis always retains selected files and can optionally
-receive bounded readable source, images and PDFs. Other binary contents are not
+receive bounded readable files, ZIP project source, images and PDFs. Other binary contents are not
 sent. Files are limited to 4 MB each.
 See [supported outputs, limits and verification](docs/OUTPUTS.md).
 

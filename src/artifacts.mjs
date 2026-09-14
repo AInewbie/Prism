@@ -1,5 +1,6 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { AppError } from './core.mjs';
+import { appBundleSources, inspectAppBundle, MAX_SYNTHESIS_APP_BUNDLES } from './app-bundles.mjs';
 
 export const MAX_FILE_BYTES = 4_000_000;
 export const MAX_RUN_BYTES = 12_000_000;
@@ -38,8 +39,10 @@ export function fileArtifact(input, origin = 'attached') {
     if (bytes.toString('base64') !== input.data) throw new AppError('Invalid base64 file.');
   }
   if (bytes.length > MAX_FILE_BYTES) throw new AppError('Maximum 4 MB per file.', 413);
-  return { id: randomUUID(), name, mimeType, size: bytes.length, encoding: 'base64', data: bytes.toString('base64'),
+  const artifact = { id: randomUUID(), name, mimeType, size: bytes.length, encoding: 'base64', data: bytes.toString('base64'),
     sha256: createHash('sha256').update(bytes).digest('hex'), origin };
+  if (mimeType === 'application/zip' || name.toLowerCase().endsWith('.zip')) artifact.appBundle = inspectAppBundle(bytes);
+  return artifact;
 }
 function referenceArtifact(id, name, mimeType, provider) {
   return { id: randomUUID(), name: safeName(name || 'provider-file'), mimeType: mime(mimeType, name || ''),
@@ -135,7 +138,8 @@ export function artifactsFor(run, owner) {
   return (run.artifacts || []).filter(f => ids.has(f.id));
 }
 export function artifactManifest(run, owner) {
-  return artifactsFor(run, owner).map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: f.size, available: f.encoding === 'base64', contentsIncluded: false }));
+  return artifactsFor(run, owner).map(f => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: f.size,
+    available: f.encoding === 'base64', contentsIncluded: false, ...(f.appBundle ? { appBundle: f.appBundle } : {}) }));
 }
 const synthesisTextTypes = new Set([
   'application/json', 'application/javascript', 'application/xml',
@@ -145,10 +149,30 @@ function readableForSynthesis(file) {
   return file.mimeType?.startsWith('text/') || synthesisTextTypes.has(file.mimeType);
 }
 export function synthesisArtifactManifest(run, owner, includeContents = false,
-  budget = { remaining: MAX_SYNTHESIS_TOTAL_CHARS, included: 0 }) {
+  budget = { remaining: MAX_SYNTHESIS_TOTAL_CHARS, included: 0 }, includeAppSources = false,
+  appBudget = { included: 0 }) {
   return artifactsFor(run, owner).map((file) => {
     const metadata = { id: file.id, name: file.name, mimeType: file.mimeType, size: file.size,
-      available: file.encoding === 'base64', contentsIncluded: false };
+      available: file.encoding === 'base64', contentsIncluded: false,
+      ...(file.appBundle ? { appBundle: file.appBundle } : {}) };
+    if (file.appBundle) {
+      if (!includeAppSources) return metadata;
+      if (file.encoding !== 'base64') return { ...metadata, appSourceExclusionReason: 'archive bytes unavailable' };
+      if (file.appBundle.status !== 'ready') return { ...metadata, appSourceExclusionReason: 'archive did not pass safe inspection' };
+      if (appBudget.included >= MAX_SYNTHESIS_APP_BUNDLES)
+        return { ...metadata, appSourceExclusionReason: 'app-bundle synthesis limit reached' };
+      appBudget.included++;
+      const inspected = appBundleSources(Buffer.from(file.data, 'base64'), {
+        remaining: budget.remaining, included: budget.included,
+        maxFiles: MAX_SYNTHESIS_FILES, maxPerFile: MAX_SYNTHESIS_FILE_CHARS,
+      });
+      for (const source of inspected.sources) {
+        budget.remaining -= source.includedCharacters;
+        budget.included++;
+      }
+      return { ...metadata, appSourceContentsIncluded: inspected.sources.length > 0,
+        appSources: inspected.sources, appSourceExclusions: inspected.excluded };
+    }
     if (!includeContents) return metadata;
     if (file.encoding !== 'base64') return { ...metadata, exclusionReason: 'file bytes unavailable' };
     if (!readableForSynthesis(file)) return { ...metadata, exclusionReason: 'binary or unsupported type' };

@@ -434,7 +434,9 @@ function renderCombine() {
     selectedImages = selected.flatMap((r) => runFiles(r)).filter((file) =>
       ['image/png', 'image/jpeg', 'image/webp'].includes(file.mimeType)),
     selectedPdfs = selected.flatMap((r) => runFiles(r)).filter((file) =>
-      file.mimeType === 'application/pdf');
+      file.mimeType === 'application/pdf'),
+    selectedApps = selected.flatMap((r) => runFiles(r)).filter((file) =>
+      file.appBundle?.status === 'ready' && file.appBundle.readableFileCount > 0);
   $("combine-sources").innerHTML = run.responses
     .filter((r) => r.status === "complete")
     .map(
@@ -475,6 +477,7 @@ function renderCombine() {
   $("combined-meta").textContent = run.combined.method
     ? run.combined.method + " · Sources " + run.combined.sources.join(", ") +
       (run.combined.fileContentMode === "bounded-readable-text" ? " · readable file contents used" : "") +
+      (run.combined.appContentMode === "bounded-project-sources" ? " · app source inspected" : "") +
       (run.combined.imageContentMode === "bounded-inline-images" ? " · images visually inspected" : "") +
       (run.combined.documentContentMode === "bounded-inline-pdfs" ? " · PDFs inspected" : "")
     : "An editable space for the strongest ideas.";
@@ -494,6 +497,7 @@ function renderCombine() {
     !selected.length ||
     S.combinedDraft !== null ||
     Object.keys(S.notes).length > 0 ||
+    ($("include-app-sources").checked && !selectedApps.length) ||
     (($("include-images").checked || $("include-pdfs").checked) && !currentVisualProviderSupported);
   $("synthesize-button").textContent = S.combineBusy
     ? "Combining…"
@@ -507,6 +511,9 @@ function renderCombine() {
         p($("synth-provider").value)?.name +
         ". Sends answer text, scores, notes and file metadata" +
         ($("include-readable-files").checked ? ", plus the readable file contents shown below. " : ". File contents stay local. ") +
+        ($("include-app-sources").checked
+          ? "Bounded source from selected ZIP app bundles is sent; archives are never extracted or run. "
+          : "ZIP project structure is disclosed, but its source stays local. ") +
         ($("include-images").checked
           ? (currentVisualProviderSupported ? "Selected images are sent for visual inspection. " : "Choose ChatGPT, Gemini or Claude to inspect images. ")
           : "Image bytes stay local. ") +
@@ -515,6 +522,7 @@ function renderCombine() {
           : "PDF bytes stay local. ") +
         "Original files stay attached to the draft. API charges apply.";
   $("include-readable-files").disabled = busy();
+  $("include-app-sources").disabled = busy() || !selectedApps.length;
   $("include-images").disabled = busy() || !selectedImages.length;
   $("include-pdfs").disabled = busy() || !selectedPdfs.length;
   $("image-synthesis-help").textContent = selectedImages.length
@@ -525,6 +533,10 @@ function renderCombine() {
     ? selectedPdfs.length + " selected PDF" + (selectedPdfs.length === 1 ? "" : "s") +
       ". Up to 3 / 8 MB total will be sent when enabled."
     : "No PDF is attached to the selected answers.";
+  $("app-synthesis-help").textContent = selectedApps.length
+    ? selectedApps.length + " inspectable ZIP app bundle" + (selectedApps.length === 1 ? "" : "s") +
+      ". Up to 3 bundles / 200 entries each; source shares the 12-file / 60,000-character limit."
+    : "No safely inspectable ZIP app bundle with readable source is attached to the selected answers.";
   queueSynthesisPreview(selected);
   $("combined-text").disabled = S.combineBusy;
   $("save-combined").disabled = S.combineBusy || S.combinedDraft === null;
@@ -550,6 +562,7 @@ function queueSynthesisPreview(selected) {
     providers: selected.map((r) => r.provider),
     direction: $("combine-direction").value,
     includeReadableFiles: $("include-readable-files").checked,
+    includeAppSources: $("include-app-sources").checked,
     includeImages: $("include-images").checked,
     includePdfs: $("include-pdfs").checked,
     provider: $("synth-provider").value,
@@ -788,6 +801,7 @@ async function combine(method) {
         provider: $("synth-provider").value,
         direction: $("combine-direction").value,
         includeReadableFiles: $("include-readable-files").checked,
+        includeAppSources: $("include-app-sources").checked,
         includeImages: $("include-images").checked,
         includePdfs: $("include-pdfs").checked,
         version: S.run.combined.version,
@@ -1029,6 +1043,10 @@ $("synthesize-button").onclick = () => combine("synthesize");
 $("synth-provider").onchange = renderCombine;
 $("combine-direction").oninput = renderCombine;
 $("include-readable-files").onchange = () => {
+  S.synthesisPreviewSignature = "";
+  renderCombine();
+};
+$("include-app-sources").onchange = () => {
   S.synthesisPreviewSignature = "";
   renderCombine();
 };

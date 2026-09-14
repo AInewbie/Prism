@@ -179,6 +179,7 @@ test('attachments keep provenance, reject stale edits, restore draft files, expo
   assert.match(JSON.stringify(contentPreview.body), /window\.counter=0/);
   assert.ok(contentPreview.body.payload.candidates[0].files.some(f => f.name === 'drawing.svg' && !f.contentsIncluded));
   assert.equal((await call(path + '/synthesis-preview', 'POST', { providers: ['openai'], includeReadableFiles: 'yes' })).status, 400);
+  assert.equal((await call(path + '/synthesis-preview', 'POST', { providers: ['openai'], includeAppSources: 'yes' })).status, 400);
   const missingAuth = await fetch(url + '/api' + path + '/artifacts/' + full.artifacts[0].id);
   assert.equal(missingAuth.status, 401);
   const zip = Buffer.from(await (await fetch(url + '/api' + path + '/export?format=zip', { headers: { 'X-Prism-Session': app.token } })).arrayBuffer());

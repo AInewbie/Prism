@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.9.0 — 14 September 2026 · safe multi-file app inspection
+
+- Inspect ZIP project structure, likely entry points, file types and declared
+  expanded size in the browser without extracting, installing or executing it.
+- Add a separate, default-off choice to send bounded readable source from up to
+  3 selected ZIP projects to the synthesis model.
+- Reject or exclude unsafe paths, encrypted entries, unsupported compression,
+  ZIP64, invalid directories, projects over 200 entries and projects declaring
+  more than 20 MB expanded data.
+- Share the existing 12-file / 60,000-character synthesis budget between direct
+  files and project sources; keep binary entries and archive base64 out of the
+  exact preview.
+- Preserve original ZIP downloads, attachments, sessions, draft history and all
+  v0.8 output modes. Record project-source use with the saved combined draft.
+- Verify unit/API safety cases plus desktop and phone app-bundle inspection,
+  source preview, synthesis, export and reload. No live provider call, charge,
+  merge, deployment or physical Samsung test was performed.
+
 ## 0.8.0 — 14 September 2026 · bounded PDF synthesis
 
 - Add a separate, default-off choice to send PDF attachments from selected

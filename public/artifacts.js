@@ -1,6 +1,7 @@
 const artifactEscape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function outputKind(file) {
   if (file.encoding === 'reference') return 'Reference';
+  if (file.appBundle) return 'App bundle';
   if (file.mimeType === 'text/html') return 'HTML / app';
   if (/^image\//.test(file.mimeType)) return 'Image';
   if (/^audio\//.test(file.mimeType)) return 'Audio';
@@ -12,7 +13,8 @@ export function outputList(files, { blind = false } = {}) {
   if (!files.length) return '';
   return '<section class="output-list" aria-label="Output files"><div class="output-heading">OUTPUT FILES <span>' + files.length + '</span></div>' + files.map((file, i) => {
     const kind = outputKind(file), title = blind ? 'File ' + (i + 1) : file.name;
-    return '<div class="output-item"><span class="output-kind">' + artifactEscape(kind) + '</span><div class="output-description"><strong>' + artifactEscape(title) + '</strong><small>' + artifactEscape(file.mimeType) + ' · ' + (file.size === null ? 'Not downloaded' : file.size < 1000 ? file.size + ' B' : (file.size / 1000).toFixed(1) + ' KB') + ' · ' + (file.origin === 'attached' ? 'Added by you' : file.origin === 'demo' ? 'Sample file' : file.origin === 'code-block' ? 'From answer code' : 'Provider output') + '</small></div><div class="output-actions">' + (kind !== 'Reference' ? '<button class="button" data-output-open="' + file.id + '">Inspect<span class="sr-only"> ' + artifactEscape(title) + '</span></button><button class="button" data-output-download="' + file.id + '">Download<span class="sr-only"> ' + artifactEscape(title) + '</span></button>' : '<span class="quiet">Attach the downloaded file</span>') + '</div></div>';
+    const bundle = file.appBundle?.status === 'ready' ? ' · ' + file.appBundle.fileCount + ' project files' : '';
+    return '<div class="output-item"><span class="output-kind">' + artifactEscape(kind) + '</span><div class="output-description"><strong>' + artifactEscape(title) + '</strong><small>' + artifactEscape(file.mimeType) + ' · ' + (file.size === null ? 'Not downloaded' : file.size < 1000 ? file.size + ' B' : (file.size / 1000).toFixed(1) + ' KB') + bundle + ' · ' + (file.origin === 'attached' ? 'Added by you' : file.origin === 'demo' ? 'Sample file' : file.origin === 'code-block' ? 'From answer code' : 'Provider output') + '</small></div><div class="output-actions">' + (kind !== 'Reference' ? '<button class="button" data-output-open="' + file.id + '">Inspect<span class="sr-only"> ' + artifactEscape(title) + '</span></button><button class="button" data-output-download="' + file.id + '">Download<span class="sr-only"> ' + artifactEscape(title) + '</span></button>' : '<span class="quiet">Attach the downloaded file</span>') + '</div></div>';
   }).join('') + '</section>';
 }
 export function outputBytes(file) {
@@ -51,6 +53,35 @@ export function createOutputViewer({ offline = false } = {}) {
     }
     body.append(frame);
   }
+  function bundleManifest() {
+    cleanup(); note.hidden = true;
+    const bundle = file.appBundle, intro = document.createElement('p');
+    if (bundle.status !== 'ready') {
+      intro.textContent = bundle.error || 'This archive could not be inspected safely. The original file is still preserved.';
+      body.append(intro); return;
+    }
+    intro.textContent = bundle.fileCount + ' files · ' + bundle.totalUncompressedBytes.toLocaleString() +
+      ' expanded bytes · ' + bundle.readableFileCount + ' readable source files. Nothing was extracted or executed.';
+    body.append(intro);
+    if (bundle.entryPoints?.length) {
+      const entry = document.createElement('p'); entry.className = 'bundle-entry-points';
+      entry.textContent = 'Likely entry points: ' + bundle.entryPoints.join(', '); body.append(entry);
+    }
+    const list = document.createElement('ul'); list.className = 'bundle-file-list';
+    for (const item of bundle.files || []) {
+      const row = document.createElement('li'), path = document.createElement('code'), meta = document.createElement('span');
+      path.textContent = item.path; meta.textContent = item.safe
+        ? item.size.toLocaleString() + ' B · ' + (item.readable ? 'readable source' : item.mimeType)
+        : 'excluded · unsafe path';
+      row.append(path, meta); list.append(row);
+    }
+    body.append(list);
+    if (bundle.unsafeEntryCount || bundle.encryptedEntryCount || bundle.unsupportedEntryCount) {
+      const warning = document.createElement('p'); warning.className = 'output-preview-note'; warning.textContent =
+        'Excluded: ' + bundle.unsafeEntryCount + ' unsafe paths, ' + bundle.encryptedEntryCount +
+        ' encrypted entries, ' + bundle.unsupportedEntryCount + ' unsupported compression entries.'; body.append(warning);
+    }
+  }
   dialog.querySelector('[data-close]').onclick = () => dialog.close();
   dialog.addEventListener('close', () => { cleanup(); restoreFocus?.focus?.({ preventScroll: true }); });
   dialog.querySelector('[data-source]').onclick = source;
@@ -63,7 +94,8 @@ export function createOutputViewer({ offline = false } = {}) {
     dialog.querySelector('[data-source]').hidden = !['HTML / app', 'Text / code'].includes(outputKind(file)) && file.mimeType !== 'image/svg+xml';
     dialog.querySelector('[data-run]').hidden = file.mimeType !== 'text/html';
     const kind = outputKind(file);
-    if (['HTML / app', 'Text / code'].includes(kind)) source();
+    if (kind === 'App bundle') bundleManifest();
+    else if (['HTML / app', 'Text / code'].includes(kind)) source();
     else if (['Image', 'Audio', 'Video'].includes(kind)) {
       const node = document.createElement(kind === 'Image' ? 'img' : kind.toLowerCase());
       if (kind === 'Image') node.alt = title; else { node.controls = true; node.preload = 'metadata'; }

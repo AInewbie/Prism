@@ -1,6 +1,6 @@
 {
   "name": "llm-comparison-studio",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "description": "Prism: compare, score and combine answers from multiple language models.",
   "type": "module",
@@ -14,7 +14,7 @@
     "preview:plugin": "node plugins/prism/preview.mjs",
     "test:plugin-browser": "node test/plugin-browser.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "node --check src/server.mjs && node --check src/providers.mjs && node --check src/store.mjs && node --check src/core.mjs && node --check src/drafts.mjs && node --check src/browser-session.mjs && node --check src/browser-server.mjs && node --check public/browser-login.js && node --check public/app.js && node --check plugins/prism/backend.mjs && node --check plugins/prism/mcp.mjs && node --check plugins/prism/server.mjs && node --check plugins/prism/preview.mjs && node --check plugins/prism/widget.js && node --check public/session-search.js && node --check scripts/sync-html-demo.mjs && node --check src/artifacts.mjs && node --check src/zip.mjs && node --check public/artifacts.js",
+    "check": "node --check src/server.mjs && node --check src/providers.mjs && node --check src/store.mjs && node --check src/core.mjs && node --check src/drafts.mjs && node --check src/browser-session.mjs && node --check src/browser-server.mjs && node --check public/browser-login.js && node --check public/app.js && node --check plugins/prism/backend.mjs && node --check plugins/prism/mcp.mjs && node --check plugins/prism/server.mjs && node --check plugins/prism/preview.mjs && node --check plugins/prism/widget.js && node --check public/session-search.js && node --check scripts/sync-html-demo.mjs && node --check src/artifacts.mjs && node --check src/app-bundles.mjs && node --check src/zip.mjs && node --check public/artifacts.js",
     "test:browser": "node test/browser.mjs",
     "test:html-demo": "node test/html-demo.mjs",
     "test:session-search": "node test/session-search-browser.mjs",

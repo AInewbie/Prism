@@ -1,4 +1,4 @@
-# Mixed outputs · Prism 0.8.0
+# Mixed outputs · Prism 0.9.0
 
 An answer is now text plus output files. Compare and score the whole answer,
 select it for a combined draft, and keep the original files with that draft.
@@ -33,7 +33,7 @@ version so a later edit cannot invalidate a saved draft's references.
 | Audio / video | Native browser player when the MIME type and codec are supported; original download |
 | PDF | Preserved and downloadable; optional bounded native-model inspection during synthesis; no local rendering, extraction or execution |
 | Word, Excel, PowerPoint and other binary files | Preserved as attachments and downloadable; no office-document rendering or understanding in this version |
-| ZIP / multi-file app projects | Preserved and downloadable as the original archive; not unpacked, installed or executed by Prism |
+| ZIP / multi-file app projects | Original archive preserved; safe in-memory manifest inspection and optional bounded readable-source synthesis; never unpacked to disk, installed or executed |
 | Provider-hosted file references | Metadata retained with **Not downloaded**; attach the actual downloaded file for preview/export |
 
 ### Provider coverage
@@ -70,6 +70,12 @@ AI synthesis always receives answer text, scores, notes and file metadata.
 adds valid UTF-8 text/code/CSV/JSON/HTML source up to 12 files, 20,000 characters
 per file and 60,000 characters total. The exact server-generated request preview
 marks included contents, truncations and exclusions before the provider call.
+ZIP app bundles have a separate, default-off source option. Prism can inspect up
+to 3 bundles, 200 entries and 20 MB declared expanded data per bundle; readable
+project files share the same 12-file / 60,000-character budget. Unsafe paths,
+encrypted entries, unsupported compression and invalid archives are excluded or
+blocked. The archive is parsed in memory for bounded source and never extracted,
+installed or executed. Its base64 bytes never appear in the exact preview.
 Images remain metadata-only unless **Let the synthesizer inspect images** is
 separately enabled. That default-off mode sends up to 6 PNG, JPEG or WebP images,
 4 MB each and 8 MB total, through native ChatGPT, Gemini or Claude image-input
@@ -80,8 +86,8 @@ inspect PDFs** is separately enabled. That default-off mode sends up to 3 PDFs,
 blocks. The exact preview shows PDF names, sizes and source labels without base64.
 Grok, SVG and every other binary format remain metadata-only. Included source,
 images and PDFs are explicitly untrusted and are never executed. Files stay
-beside the combined text; this is not a video, office-document or multi-file app
-merging engine.
+beside the combined text; Prism compares project structure and source but is not
+a video, office-document or executable app-merging engine.
 
 - **Download** gets one exact original file.
 - **Export files ZIP** contains `comparison.md`, a metadata `manifest.json`
@@ -151,11 +157,12 @@ PRISM_TEST_BROWSER_GATEWAY=1 npm run test:browser
 ```
 
 Tests use disposable synthetic workspaces and fixture files, no paid API calls.
-The output suite exercises app interactions, parent/storage/API/network isolation,
+The output suite exercises app interactions, app-bundle manifests and source
+synthesis, parent/storage/API/network isolation,
 image preview, attachment upload over the old request limit, exact file downloads,
 combined files, ZIP export and reload at desktop/phone widths. Unit/API tests
 also check all adapters, native multimodal synthesis payloads, visual-input
-and PDF-input limits, base64 omission from previews, malformed/oversized data, stale reviews,
+PDF-input and ZIP project limits, base64 omission from previews, malformed/oversized data, stale reviews,
 file provenance, draft restore, ZIP CRC integrity with Python's independent
 reader, and restart persistence. Python 3 is needed for that independent ZIP
 verification.

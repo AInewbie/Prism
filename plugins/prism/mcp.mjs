@@ -59,10 +59,11 @@ export function createMcpServer(backend) {
       usefulness: z.number().int().min(1).max(5).nullable(), clarity: z.number().int().min(1).max(5).nullable() }).optional(),
       notes: z.string().max(8000).optional(), selected: z.boolean().optional() }, write, async ({run_id,...patch}) => {
         await backend.call('/runs/' + run_id + '/review','PATCH',patch); return result(run_id,'Your review was saved.'); });
-  register('prism_combine', 'Combine selected answers', 'Compile selected complete answers locally, or synthesize them through one provider. Synthesis sends the original prompt, selected answers, ratings, notes and direction. Readable file contents are sent only when explicitly enabled and are bounded; binary files remain metadata-only. Requires explicit approval for live calls. Prior drafts are preserved.',
+  register('prism_combine', 'Combine selected answers', 'Compile selected complete answers locally, or synthesize them through one provider. Synthesis sends the original prompt, selected answers, ratings, notes and direction. Readable files and safely inspected ZIP project source are sent only when separately enabled and bounded; archives are never extracted or run. Requires explicit approval for live calls. Prior drafts are preserved.',
     { run_id: runId, providers: z.array(provider).min(1).max(4), method: z.enum(['compile','synthesize']),
       direction: z.string().max(8000).default(''), provider: provider.default('openai'), version,
-      include_readable_files: z.boolean().default(false), acknowledge_paid: z.boolean().default(false) }, { ...write, openWorldHint: true }, async (a) => {
+      include_readable_files: z.boolean().default(false), include_app_sources: z.boolean().default(false),
+      acknowledge_paid: z.boolean().default(false) }, { ...write, openWorldHint: true }, async (a) => {
         await backend.combine(a); return result(a.run_id,'Combined draft saved. Review factual claims yourself.'); });
   register('prism_save_draft', 'Save edited combined answer', 'Save user-edited combined text with its current version. Archives the preceding saved draft.',
     {run_id: runId, text: z.string().max(550000), version}, write, async ({run_id,...patch}) => {
